@@ -1,0 +1,6 @@
+# Build outputs
+bin/
+obj/
+
+# Project files
+.vscode/

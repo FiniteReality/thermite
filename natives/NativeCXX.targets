@@ -1,0 +1,64 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!-- Needed to shut the .NET Core CLI up -->
+    <DefaultProjectTypeGuid>{ec63700c-aa70-40aa-94a0-d1b45db7b387}</DefaultProjectTypeGuid>
+
+    <IgnoreDefaultIncludeGroups Condition="'$(IgnoreDefaultIncludeGroups)'==''">false</IgnoreDefaultIncludeGroups>
+
+    <Compiler Condition="'$(Compiler)'==''">g++</Compiler>
+
+    <!-- TODO: These should be detected based on the compiler. -->
+    <CompilerOptions Condition="'$(Platform)'=='x86'">-m32 $(CompilerOptions)</CompilerOptions>
+    <CompilerOptions Condition="'$(Platform)'=='x64'">-m64 $(CompilerOptions)</CompilerOptions>
+    <!-- TODO: this should detect current architecture -->
+    <CompilerOptions Condition="'$(Platform)'=='AnyCPU'">-m64 $(CompilerOptions)</CompilerOptions>
+    <LinkerOptions Condition="'$(TargetType)'=='library'">-shared $(LinkerOptions)</LinkerOptions>
+
+    <OutputPath Condition="'$(OutputPath)'==''">bin/$(Configuration)</OutputPath>
+    <TargetType Condition="'$(TargetType)'==''">exe</TargetType>
+
+    <TargetRuntime>Native</TargetRuntime>
+  </PropertyGroup>
+
+  <!-- OS definitions -->
+  <PropertyGroup Condition="'$(OS)'=='Windows_NT'">
+    <CompilerIntermediateExt Condition="'$(CompilerIntermediateExt)'==''">.obj</CompilerIntermediateExt>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OS)'=='Unix'">
+    <CompilerIntermediateExt Condition="'$(CompilerIntermediateExt)'==''">.o</CompilerIntermediateExt>
+    <!-- TODO: MSBuild internally overwrites this with `.exe` - there seems to be no way to fix this. -->
+    <TargetExt Condition="'$(TargetType)'=='exe'"></TargetExt>
+    <TargetExt Condition="'$(TargetType)'=='library'">.so</TargetExt>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OS)'=='OSX'">
+    <CompilerIntermediateExt Condition="'$(CompilerIntermediateExt)'==''">.o</CompilerIntermediateExt>
+    <!-- TODO: MSBuild internally overwrites this with `.exe` - there seems to be no way to fix this. -->
+    <TargetExt Condition="'$(TargetType)'=='exe'"></TargetExt>
+    <TargetExt Condition="'$(TargetType)'=='library'">.dylib</TargetExt>
+  </PropertyGroup>
+
+  <!-- Group definitions -->
+  <ItemGroup Condition="'$(IgnoreDefaultIncludeGroups)'=='false'">
+      <Compile Include="*.cpp;*.cxx;*.cc;*.c++;*.c" />
+      <Clean Include="$(IntermediateOutputPath)*.cpp$(CompilerIntermediateExt);$(IntermediateOutputPath)*.cxx$(CompilerIntermediateExt);$(IntermediateOutputPath)*.cc$(CompilerIntermediateExt);$(IntermediateOutputPath)*.c++$(CompilerIntermediateExt);$(IntermediateOutputPath)*.c$(CompilerIntermediateExt)" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+
+  <Target Name="CoreCompileIntermediate" Inputs="@(Compile)" Outputs="@(Compile->'$(IntermediateOutputPath)%(Identity)$(CompilerIntermediateExt)')">
+    <Exec Command="$(Compiler) $(CompilerOptions) -c %(Compile.Identity) -o $(IntermediateOutputPath)%(Compile.Identity)$(CompilerIntermediateExt)" />
+    <Message Text="%(Compile.Identity) -> %(Compile.Identity)$(CompilerIntermediateExt)" />
+  </Target>
+
+  <Target Name="CoreCompile" DependsOnTargets="CoreCompileIntermediate" Inputs="@(Compile->'$(IntermediateOutputPath)%(Identity)$(CompilerIntermediateExt)')" Outputs="$(IntermediateOutputPath)$(AssemblyName)$(TargetExt)">
+    <PropertyGroup>
+      <InputFiles>@(Compile->'$(IntermediateOutputPath)%(Identity)$(CompilerIntermediateExt)', ' ')</InputFiles>
+    </PropertyGroup>
+    <Exec Command="$(Compiler) $(CompilerOptions) $(LinkerOptions) $(InputFiles) -o $(IntermediateOutputPath)$(AssemblyName)$(TargetExt)" />
+  </Target>
+
+  <!-- Targets needed to integrate nicely... -->
+  <Target Name="CreateManifestResourceNames" />
+</Project>

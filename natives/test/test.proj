@@ -1,0 +1,10 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <Compiler>clang++</Compiler>
+        <CompilerOptions>-std=c++14 -Wall -Wextra -pedantic -fPIC</CompilerOptions>
+
+        <TargetType>library</TargetType>
+    </PropertyGroup>
+
+    <Import Project="../NativeCXX.targets" />
+</Project>

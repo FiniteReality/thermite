@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
+    <PackageReference Include="System.Memory" Version="4.5.1" />
+  </ItemGroup>
+
+  <!--<ItemGroup>
+    <ProjectReference Include="../../natives/test/test.proj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Content</OutputItemType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>-->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Wumpus.Net/src/Wumpus.Net.Core/Wumpus.Net.Core.csproj" />
+    <ProjectReference Include="../../../Wumpus.Net/src/Wumpus.Net.Audio/Wumpus.Net.Audio.csproj" />
+  </ItemGroup>
+
+</Project>
