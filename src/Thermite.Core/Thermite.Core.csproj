@@ -21,7 +21,9 @@
   </ItemGroup>-->
 
   <ItemGroup>
-    <ProjectReference Include="../../../Wumpus.Net/src/Wumpus.Net.Core/Wumpus.Net.Core.csproj" />
+    <PackageReference Include="Wumpus.Net.Core" Version="0.2.2-build-0031" />
+    <!-- TODO: uncomment when Wumpus.Net.Audio has been merged -->
+    <!--<PackageReference Include="Wumpus.Net.Audio" Version="0.2.2-build-0031" />-->
     <ProjectReference Include="../../../Wumpus.Net/src/Wumpus.Net.Audio/Wumpus.Net.Audio.csproj" />
   </ItemGroup>
 

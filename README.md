@@ -50,6 +50,17 @@ Contributors welcome!
 
 ## Building ##
 
+You need [Wumpus.Net.Audio](https://github.com/discord-net/Wumpus.Net/pull/10)
+in the parent directory of `thermite`. For example:
+```
+$ git clone https://github.com/discord-net/Wumpus.Net.git
+$ cd Wumpus.Net
+$ git fetch origin pull/10/head:pr-10
+$ git checkout pr-10
+$ cd ..
+```
+
+And then to build thermite:
 ```
 $ git clone https://github.com/FiniteReality/thermite.git
 $ cd thermite
