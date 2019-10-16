@@ -27,7 +27,6 @@
     <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
     <Nullable>enable</Nullable>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <SignAssembly>true</SignAssembly>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>

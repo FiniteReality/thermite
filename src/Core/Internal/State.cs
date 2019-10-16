@@ -14,7 +14,11 @@ namespace Thermite.Utilities
 
         private volatile int _value;
 
-        public int BeginDispose() => Transition(to: Disposing);
+        public static implicit operator int(State state)
+            => state._value;
+
+        public int BeginDispose()
+            => Transition(to: Disposing);
 
         public void EndDispose()
         {
@@ -29,5 +33,11 @@ namespace Thermite.Utilities
 
         public int TryTransition(int from, int to)
             => CompareExchange(ref _value, to, from);
+
+        public void ThrowIfDisposed(string? objectName)
+        {
+            if (_value > Disposing)
+                throw new ObjectDisposedException(objectName);
+        }
     }
 }
