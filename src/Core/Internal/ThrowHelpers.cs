@@ -12,5 +12,12 @@ namespace Thermite.Utilities
         {
             throw new InvalidOperationException(message);
         }
+
+        [DoesNotReturn]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowArgumentOutOfRangeException(string paramName)
+        {
+            throw new ArgumentOutOfRangeException(paramName);
+        }
     }
 }

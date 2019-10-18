@@ -48,8 +48,6 @@ namespace Thermite.Discord
         public IPEndPoint? ClientEndPoint { get; private set; }
         public uint Ssrc { get; private set; }
 
-        public event EventHandler<LogMessage>? Log;
-
         public event EventHandler<IPEndPoint>? ClientEndPointUpdated;
         public event EventHandler<uint>? ClientSsrcUpdated;
         public event EventHandler<IPEndPoint>? RemoteEndPointUpdated;
@@ -118,8 +116,7 @@ namespace Thermite.Discord
 
             SendSpeaking(_serializer, speaking, delay, Ssrc);
 
-            await FlushWritePipe()
-                .ConfigureAwait(false);
+            await FlushWritePipe();
         }
 
         private ValueTask<bool> TryProcessPacketAsync(Utf8JsonWriter writer,
@@ -130,10 +127,6 @@ namespace Thermite.Discord
 
             if (!Payload.TryReadOpcode(ref reader, out var opcode))
                 return new ValueTask<bool>(false);
-
-            Log?.Invoke(this, new LogMessage(
-                category: "VoiceGatewayClient.TryProcessPacketAsync",
-                message: $"Read opcode {opcode}"));
 
             Task? asyncTask = null;
             switch (opcode)
@@ -198,11 +191,6 @@ namespace Thermite.Discord
                     if (!reader.TrySkip())
                         return new ValueTask<bool>(false);
 
-                    Log?.Invoke(this, new LogMessage(
-                        category: "VoiceGatewayClient.TryProcessPacketAsync",
-                        message: $"Unhandled opcode {opcode}"
-                    ));
-
                     break;
             }
 
@@ -217,7 +205,7 @@ namespace Thermite.Discord
 
             static async Task<bool> HandleAsyncPart(Task asyncTask)
             {
-                await asyncTask.ConfigureAwait(false);
+                await asyncTask;
 
                 // If the task isn't a Task<bool>, it likely wrote to the Pipe
                 // via JsonSerializer. This is likely always going to succeed.
@@ -240,16 +228,8 @@ namespace Thermite.Discord
             {
                 _serializerLock.Enter(ref lockTaken);
 
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendHeartbeat",
-                    message: $"Writing heartbeat"));
-
                 Payload.WriteHeartbeat(writer, nonce);
                 writer.Flush();
-
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendHeartbeat",
-                    message: $"Wrote heartbeat ({writer.BytesCommitted} bytes)"));
             }
             finally
             {
@@ -266,17 +246,9 @@ namespace Thermite.Discord
             {
                 _serializerLock.Enter(ref lockTaken);
 
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendIdentify",
-                    message: $"Writing identify"));
-
                 Payload.WriteIdentify(writer, _userInfo.UserId, _userInfo.GuildId,
                     _userInfo.SessionId, _userInfo.Token);
                 writer.Flush();
-
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendIdentify",
-                    message: $"Wrote identify ({writer.BytesCommitted} bytes)"));
             }
             finally
             {
@@ -294,16 +266,8 @@ namespace Thermite.Discord
             {
                 _serializerLock.Enter(ref lockTaken);
 
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendSpeaking",
-                    message: $"Writing speaking"));
-
                 Payload.WriteSpeaking(writer, speaking, delay, ssrc);
                 writer.Flush();
-
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendSpeaking",
-                    message: $"Wrote speaking ({writer.BytesCommitted} bytes)"));
             }
             finally
             {
@@ -319,15 +283,13 @@ namespace Thermite.Discord
         {
 
             var bytesSent = await _discoverySocket.SendToAsync(
-                DiscoveryPacket, SocketFlags.None, EndPoint)
-                .ConfigureAwait(false);
+                DiscoveryPacket, SocketFlags.None, EndPoint);
 
             if (bytesSent != 70)
                 return false;
 
             var result = await _discoverySocket.ReceiveFromAsync(
-                DiscoveryPacketResponse, SocketFlags.None, EndPoint)
-                .ConfigureAwait(false);
+                DiscoveryPacketResponse, SocketFlags.None, EndPoint);
 
             if (result.ReceivedBytes != 70)
                 return false;
@@ -379,17 +341,9 @@ namespace Thermite.Discord
             {
                 _serializerLock.Enter(ref lockTaken);
 
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendSelectProtocol",
-                    message: $"Writing SelectProtocol"));
-
                 Payload.WriteSelectProtocol(writer, ClientEndPoint!,
                     EncryptionModes.XSalsa20_Poly1305_Lite);
                 writer.Flush();
-
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.SendSelectProtocol",
-                    message: $"Wrote SelectProtocol ({writer.BytesCommitted} bytes)"));
             }
             finally
             {

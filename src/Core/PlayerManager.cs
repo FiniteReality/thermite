@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net;
 using System.Net.Sockets;
@@ -31,30 +32,41 @@ namespace Thermite.Core
         private State _state;
 
         /// <summary>
-        /// Fired when a message is logged by a client.
-        /// </summary>
-        public event EventHandler<LogMessage>? Log;
-
-        /// <summary>
         /// The user ID to perform all connections as.
         /// </summary>
         public ulong UserId { get; }
 
-        //public IReadOnlyList<ITrackSource> Sources { get; }
+        /// <summary>
+        /// Gets a list of provider factories which can be used to retrieve
+        /// audio files from tracks.
+        /// </summary>
+        public IReadOnlyList<IAudioProviderFactory> Providers { get; }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="PlayerManager"/> type.
+        /// Gets a list of sources which can be used to retrieve tracks
         /// </summary>
-        /// <param name="userId">The user ID to connect as.</param>
-        /// <param name="clientCount">The number of sockets to create.</param>
-        public PlayerManager(ulong userId, int clientCount = 20)
+        public IReadOnlyList<ITrackSource> Sources { get; }
+
+        /// <summary>
+        /// Gets a list of transcoder factories which can be used to retrieve
+        /// Opus packets from audio files.
+        /// </summary>
+        public IReadOnlyList<IAudioTranscoderFactory> Transcoders { get; }
+
+        internal PlayerManager(ulong userId, uint socketCount,
+            IReadOnlyList<IAudioProviderFactory> providers,
+            IReadOnlyList<ITrackSource> sources,
+            IReadOnlyList<IAudioTranscoderFactory> transcoders)
         {
             UserId = userId;
+            Providers = providers;
+            Sources = sources;
+            Transcoders = transcoders;
 
             _players = new ConcurrentDictionary<ulong, IPlayer>();
 
             var builder = ImmutableDictionary.CreateBuilder<int, SocketInfo>();
-            for (int x = 0; x < clientCount; x++)
+            for (int x = 0; x < socketCount; x++)
             {
                 builder.Add(x, new SocketInfo());
             }
@@ -73,8 +85,7 @@ namespace Thermite.Core
                 {
                     var player = (Player)pair.Value;
 
-                    await player.DisposeAsync()
-                        .ConfigureAwait(false);
+                    await player.DisposeAsync();
                 }
 
                 foreach (var pair in _udpClients)
@@ -172,19 +183,15 @@ namespace Thermite.Core
 
         private IPlayer CreatePlayer(ulong guildId, PlayerInfo info)
         {
-            var player = new Player(info.UserInfo, info.SocketInfo.Socket,
-                info.EndPoint, info.SocketInfo.DiscoveryEndPoint);
+            var player = new Player(this, info.UserInfo,
+                info.SocketInfo.Socket, info.EndPoint,
+                info.SocketInfo.DiscoveryEndPoint);
 
             player.ClientEndPointUpdated +=
                 (_, endPoint) =>
                 {
                     info.SocketInfo.DiscoveryEndPoint = endPoint;
                 };
-
-            player.Log += (e, message) =>
-            {
-                Log?.Invoke(e, message);
-            };
 
             player.Start();
 

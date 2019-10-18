@@ -38,8 +38,7 @@ namespace Thermite.Discord
                 {
                     runCancelToken.ThrowIfCancellationRequested();
 
-                    await _websocket.ConnectAsync(endpoint, cancellationToken)
-                        .ConfigureAwait(false);
+                    await _websocket.ConnectAsync(endpoint, cancellationToken);
 
                     await Task.WhenAll(
                         RunHeartbeatAsync(_serializer, runCancelToken),
@@ -78,21 +77,18 @@ namespace Thermite.Discord
         private async Task RunHeartbeatAsync(Utf8JsonWriter writer,
             CancellationToken cancellationToken = default)
         {
-            await _heartbeatMutex.WaitAsync(cancellationToken)
-                .ConfigureAwait(false);
+            await _heartbeatMutex.WaitAsync(cancellationToken);
 
             FlushResult result = default;
             while (!result.IsCompleted)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                await Task.Delay(_heartbeatInterval, cancellationToken)
-                    .ConfigureAwait(false);
+                await Task.Delay(_heartbeatInterval, cancellationToken);
 
                 SendHeartbeat(writer, _nonce++);
 
-                result = await FlushWritePipe(cancellationToken)
-                    .ConfigureAwait(false);
+                result = await FlushWritePipe(cancellationToken);
             }
         }
 
@@ -109,12 +105,7 @@ namespace Thermite.Discord
                     cancellationToken.ThrowIfCancellationRequested();
 
                     readResult = await reader
-                        .ReadAsync(cancellationToken)
-                        .ConfigureAwait(false);
-
-                    Log?.Invoke(this, new LogMessage(
-                        category: "VoiceGatewayClient.RunProcessAsync",
-                        message: $"Read {readResult.Buffer.Length} bytes"));
+                        .ReadAsync(cancellationToken);
 
                     var buffer = readResult.Buffer;
                     var consumed = buffer.Start;
@@ -124,48 +115,19 @@ namespace Thermite.Discord
                         ref buffer, cancellationToken))
                     {
                         consumed = buffer.Start;
-                        examined = consumed;
-                        var length = readResult.Buffer.Length - buffer.Length;
-                        Log?.Invoke(this, new LogMessage(
-                            category: "VoiceGatewayClient.RunProcessAsync",
-                            message: $"Processed {length} bytes"));
+                        examined = consumed;;
 
                         if (_serializer.BytesCommitted > 0)
                             flushResult = await FlushWritePipe(
-                                cancellationToken)
-                                .ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        Log?.Invoke(this, new LogMessage(
-                            category: "VoiceGatewayClient.RunProcessAsync",
-                            message: $"Failed to process message, waiting..."
-                        ));
+                                cancellationToken);
                     }
 
                     reader.AdvanceTo(consumed, examined);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.RunProcessAsync",
-                    message: "WebSocket process task cancelled"));
-
-                throw;
-            }
-            catch (Exception e)
-            {
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.RunProcessAsync",
-                    message: $"Unhandled exception {e.Message}"));
-
-                throw;
-            }
             finally
             {
-                await reader.CompleteAsync()
-                    .ConfigureAwait(false);
+                await reader.CompleteAsync();
             }
         }
 
@@ -184,41 +146,18 @@ namespace Thermite.Discord
                     {
                         var memory = writer.GetMemory();
                         readResult = await _websocket.ReceiveAsync(memory,
-                            cancellationToken)
-                            .ConfigureAwait(false);
+                            cancellationToken);
 
                         writer.Advance(readResult.Count);
-
-                        Log?.Invoke(this, new LogMessage(
-                            category: "VoiceGatewayClient.RunReceiveAsync",
-                            message: $"Read {readResult.Count} bytes"));
                     }
 
                     flushResult = await writer
-                        .FlushAsync(cancellationToken)
-                        .ConfigureAwait(false);
+                        .FlushAsync(cancellationToken);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.RunReceiveAsync",
-                    message: "WebSocket read task cancelled"));
-
-                throw;
-            }
-            catch (Exception e)
-            {
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.RunReceiveAsync",
-                    message: $"Unhandled exception {e.Message}"));
-
-                throw;
             }
             finally
             {
-                await writer.CompleteAsync()
-                    .ConfigureAwait(false);
+                await writer.CompleteAsync();
             }
         }
 
@@ -232,16 +171,9 @@ namespace Thermite.Discord
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    readResult = await reader.ReadAsync(cancellationToken)
-                        .ConfigureAwait(false);
-
-                    Log?.Invoke(this, new LogMessage(
-                        category: "VoiceGatewayClient.RunSendAsync",
-                        message: $"Read {readResult.Buffer.Length} bytes"));
-
+                    readResult = await reader.ReadAsync(cancellationToken);
                     var buffer = readResult.Buffer;
 
-                    long length = 0;
                     while (GetWholeMessage(ref buffer, out var message))
                     {
                         // TODO: support multi-segment messages
@@ -249,46 +181,19 @@ namespace Thermite.Discord
                         {
                             var text = System.Text.Encoding.UTF8.GetString(
                                 message.First.Span);
-                            Log?.Invoke(this, new LogMessage(
-                                category: "VoiceGatewayClient.RunSendAsync",
-                                message: $"SEND: {text}"));
 
                             await _websocket.SendAsync(message.First,
                                 WebSocketMessageType.Text, true,
-                                cancellationToken)
-                                .ConfigureAwait(false);
+                                cancellationToken);
                         }
-
-                        length = message.Length;
                     }
 
                     reader.AdvanceTo(buffer.Start, buffer.End);
-
-                    Log?.Invoke(this, new LogMessage(
-                        category: "VoiceGatewayClient.RunSendAsync",
-                        message: $"Wrote {length} bytes"));
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.RunSendAsync",
-                    message: "WebSocket write task cancelled"));
-
-                throw;
-            }
-            catch (Exception e)
-            {
-                Log?.Invoke(this, new LogMessage(
-                    category: "VoiceGatewayClient.RunSendAsync",
-                    message: $"Unhandled exception {e.Message}"));
-
-                throw;
             }
             finally
             {
-                await reader.CompleteAsync()
-                    .ConfigureAwait(false);
+                await reader.CompleteAsync();
             }
 
             static bool GetWholeMessage(

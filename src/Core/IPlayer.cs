@@ -1,24 +1,36 @@
 using System;
-using System.IO.Pipelines;
 using System.Threading.Tasks;
 
 namespace Thermite.Core
 {
     /// <summary>
-    /// Represents a player for a specific guild
+    /// Represents a player for a specific guild.
     /// </summary>
     public interface IPlayer
     {
-        //// <summary>
-        //// Enqueues the given track for playback
-        //// </summary>
-        //// <param name="url">The url of the track</param>
-        //// <returns>A task representing the asynchronous completion</returns>
-        //Task EnqueueAsync(Uri url);
+        /// <summary>
+        /// Enqueues any tracks which may be found at the given
+        /// <see cref="Uri"/> for playback.
+        /// </summary>
+        /// <param name="location">
+        /// The location where track info may be found.
+        /// </param>
+        /// <returns>
+        /// A <see cref="ValueTask"/> representing the asynchronous completion
+        /// of enqueueing one or more tracks.
+        /// </returns>
+        ValueTask EnqueueAsync(Uri location);
 
         /// <summary>
-        /// meme
+        /// Enqueues a specific <see cref="TrackInfo"/> for playback.
         /// </summary>
-        PipeWriter Writer { get; }
+        /// <param name="track">
+        /// The track to enqueue for playback.
+        /// </param>
+        /// <returns>
+        /// A <see cref="ValueTask"/> representing the asynchronous completion
+        /// of enqueueing the track.
+        /// </returns>
+        ValueTask EnqueueAsync(TrackInfo track);
     }
 }
