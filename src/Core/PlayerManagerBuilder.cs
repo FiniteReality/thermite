@@ -10,6 +10,7 @@ namespace Thermite.Core
     public class PlayerManagerBuilder
     {
         private readonly ulong _userId;
+        private readonly ImmutableList<IAudioDecoderFactory>.Builder _decoders;
         private readonly ImmutableList<IAudioProviderFactory>.Builder
             _providers;
         private readonly ImmutableList<ITrackSource>.Builder _sources;
@@ -28,6 +29,7 @@ namespace Thermite.Core
         public PlayerManagerBuilder(ulong userId)
         {
             _userId = userId;
+            _decoders = ImmutableList.CreateBuilder<IAudioDecoderFactory>();
             _providers = ImmutableList.CreateBuilder<IAudioProviderFactory>();
             _sources = ImmutableList.CreateBuilder<ITrackSource>();
             _transcoders = ImmutableList
@@ -47,6 +49,19 @@ namespace Thermite.Core
                 ThrowArgumentOutOfRangeException(nameof(socketCount));
 
             _socketCount = socketCount;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds an <see cref="IAudioDecoderFactory"/> used for decoding audio
+        /// data.
+        /// </summary>
+        /// <param name="decoder">The decoder to add.</param>
+        /// <returns><code>this</code></returns>
+        public PlayerManagerBuilder AddDecoder(IAudioDecoderFactory decoder)
+        {
+            _decoders.Add(decoder);
 
             return this;
         }
@@ -99,6 +114,7 @@ namespace Thermite.Core
         public PlayerManager Build()
         {
             return new PlayerManager(_userId, _socketCount,
+                _decoders.ToImmutable(),
                 _providers.ToImmutable(),
                 _sources.ToImmutable(),
                 _transcoders.ToImmutable());

@@ -6,23 +6,23 @@ using System.Threading.Tasks;
 namespace Thermite.Core
 {
     /// <summary>
-    /// An interface used to provide audio samples for transcoding.
+    /// An interface used to retrieve audio frames from container files.
     /// </summary>
-    public interface IAudioProvider : IAsyncDisposable
+    public interface IAudioDecoder : IAsyncDisposable
     {
         /// <summary>
-        /// A <see cref="PipeReader"/> used to read samples from the underlying
-        /// provider.
+        /// A <see cref="PipeReader"/> used to read audio frames from the
+        /// decoder.
         /// </summary>
         PipeReader Output { get; }
 
         /// <summary>
-        /// Asynchronously runs the provider, writing data to
+        /// Asynchronously runs the decoder, writing data to
         /// <see cref="Output"/> as it becomes available.
         /// </summary>
         /// <param name="cancellationToken">
         /// The token to monitor for cancellation requests. The default value
-        /// is <see cref="CancellationToken.None" />
+        /// is <see cref="CancellationToken.None"/>
         /// </param>
         /// <returns>
         /// A <see cref="Task"/> whose completion signals the completion of
@@ -31,13 +31,17 @@ namespace Thermite.Core
         Task RunAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Asynchronously identifies the media type of the provided audio
-        /// file.
+        /// Asynchronously identifies the codec used to contain audio samples.
         /// </summary>
+        /// <param name="cancellationToken">
+        /// The token to monitor for cancellation requests. The default value
+        /// is <see cref="CancellationToken.None"/>
+        /// </param>
         /// <returns>
         /// A <see cref="ValueTask{TResult}"/> representing the asynchronous
-        /// completion of identifying the media type.
+        /// completion of identifying the audio codec.
         /// </returns>
-        ValueTask<string> IdentifyMediaTypeAsync();
+        ValueTask<string?> IdentifyCodecAsync(
+            CancellationToken cancellationToken = default);
     }
 }

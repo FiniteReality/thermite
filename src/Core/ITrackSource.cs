@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Thermite.Core
 {
@@ -22,10 +23,15 @@ namespace Thermite.Core
         /// <param name="location">
         /// The location to retrieve track info from.
         /// </param>
+        /// <param name="cancellationToken">
+        /// The token to monitor for cancellation requests. The default value
+        /// is <see cref="CancellationToken.None" />
+        /// </param>
         /// <returns>
         /// An asynchronous enumerable, representing track info as they are
         /// identified.
         /// </returns>
-        IAsyncEnumerable<TrackInfo> GetTracksAsync(Uri location);
+        IAsyncEnumerable<TrackInfo> GetTracksAsync(Uri location,
+            CancellationToken cancellationToken = default);
     }
 }

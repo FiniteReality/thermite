@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
@@ -122,6 +123,8 @@ namespace Thermite.Internal
         /// <inheritdoc/>
         public async ValueTask EnqueueAsync(Uri location)
         {
+            bool wasEnqueued = false;
+
             foreach (var source in _manager.Sources)
             {
                 if (source.IsSupported(location))
@@ -130,9 +133,13 @@ namespace Thermite.Internal
                         .GetTracksAsync(location))
                     {
                         await _trackQueue.Writer.WriteAsync(track);
+                        wasEnqueued = true;
                     }
                 }
             }
+
+            if (!wasEnqueued)
+                throw new InvalidUriException(nameof(location), location);
         }
 
         /// <inheritdoc/>
@@ -140,7 +147,6 @@ namespace Thermite.Internal
         {
             return _trackQueue.Writer.WriteAsync(track);
         }
-
 
         private async Task RunAsync(
             CancellationToken cancellationToken = default)
@@ -179,59 +185,81 @@ namespace Thermite.Internal
             {
                 var info = await queueReader.ReadAsync(cancellationToken);
 
-                if (!TryGetProviderFactory(info.AudioLocation,
+                if (!_manager.TryGetProviderFactory(info.AudioLocation,
                     out var providerFactory))
+                {
                     continue; // skip this track since we can't retrieve it
+                }
 
-                var provider = await providerFactory
-                    .GetProviderAsync(info.AudioLocation);
+                using var sessionCancelToken = new CancellationTokenSource();
+                using var linkedCancelToken = CancellationTokenSource
+                    .CreateLinkedTokenSource(cancellationToken,
+                        sessionCancelToken.Token);
+
+                await using var provider = providerFactory
+                    .GetProvider(info.AudioLocation);
+                var providerTask = provider.RunAsync(linkedCancelToken.Token);
                 var mediaType = info.MediaTypeOverride ??
-                    await provider.IdentifyMediaTypeAsync();
+                    await provider.IdentifyMediaTypeAsync(
+                        linkedCancelToken.Token);
 
-                if (!TryGetTranscoderFactory(mediaType,
-                    out var transcoderFactory))
-                    continue; // skip this track since we can't transcode it
+                if (!_manager.TryGetDecoderFactory(mediaType,
+                    out var decoderFactory))
+                {
+                    sessionCancelToken.Cancel();
+                    try
+                    {
+                        await providerTask;
+                    }
+                    catch (OperationCanceledException)
+                    { /* no-op */ }
+                    continue; // skip this track since we can't decode it
+                }
 
-                var transcoder = transcoderFactory.GetTranscoder(
+                await using var decoder = decoderFactory.GetDecoder(
                     provider.Output);
+                var decoderTask = decoder.RunAsync(linkedCancelToken.Token);
+                var codecType = info.CodecTypeOverride ??
+                    await decoder.IdentifyCodecAsync(linkedCancelToken.Token);
+
+                if (codecType == null)
+                {
+                    sessionCancelToken.Cancel();
+                    try
+                    {
+                        await providerTask;
+                        await decoderTask;
+                    }
+                    catch (OperationCanceledException)
+                    { /* no-op */ }
+                    continue; // skip this track since we can't identify it
+                }
+
+                if (!_manager.TryGetTranscoderFactory(codecType,
+                    out var transcoderFactory))
+                {
+                    sessionCancelToken.Cancel();
+                    try
+                    {
+                        await providerTask;
+                        await decoderTask;
+                    }
+                    catch (OperationCanceledException)
+                    { /* no-op */ }
+                    continue; // skip this track since we can't transcode it
+                }
+
+                await using var transcoder = transcoderFactory.GetTranscoder(
+                    codecType, decoder.Output);
 
                 await Task.WhenAll(
-                    transcoder.Output.CopyToAsync(Writer, cancellationToken),
-                    provider.RunAsync(cancellationToken),
-                    transcoder.RunAsync(cancellationToken));
+                    transcoder.RunAsync(linkedCancelToken.Token),
+                    transcoder.Output.CopyToAsync(Writer,
+                        linkedCancelToken.Token),
+                    decoderTask,
+                    providerTask);
             }
-        }
-
-        private bool TryGetProviderFactory(Uri location,
-            [NotNullWhen(true)]out IAudioProviderFactory? factory)
-        {
-            foreach (var providerFactory in _manager.Providers)
-            {
-                if (providerFactory.IsSupported(location))
-                {
-                    factory = providerFactory;
-                    return true;
-                }
-            }
-
-            factory = default;
-            return false;
-        }
-
-        private bool TryGetTranscoderFactory(string mediaType,
-            [NotNullWhen(true)]out IAudioTranscoderFactory? factory)
-        {
-            foreach (var transcoderFactory in _manager.Transcoders)
-            {
-                if (transcoderFactory.IsSupported(mediaType))
-                {
-                    factory = transcoderFactory;
-                    return true;
-                }
-            }
-
-            factory = default;
-            return false;
+            Console.WriteLine("WHY ARE WE NOT PROCESSING THE QUEUE???");
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using Thermite.Core;
 
 namespace Thermite.Utilities
 {
@@ -18,6 +19,14 @@ namespace Thermite.Utilities
         public static void ThrowArgumentOutOfRangeException(string paramName)
         {
             throw new ArgumentOutOfRangeException(paramName);
+        }
+
+        [DoesNotReturn]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowInvalidUriException(string paramName,
+            Uri location)
+        {
+            throw new InvalidUriException(paramName, location);
         }
     }
 }

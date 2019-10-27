@@ -1,5 +1,5 @@
 using System;
-using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Thermite.Core
@@ -25,15 +25,15 @@ namespace Thermite.Core
         bool IsSupported(Uri location);
 
         /// <summary>
-        /// Asynchronously gets a provider for the given <see cref="Uri"/>.
+        /// Gets a provider for the given <see cref="Uri"/>.
         /// </summary>
         /// <param name="location">
         /// The location of the audio file to retrieve.
         /// </param>
         /// <returns>
-        /// a <see cref="ValueTask{TResult}"/> representing the asynchronous
-        /// completion.
+        /// A <see cref="IAudioProvider"/> contianing the state of the
+        /// provider.
         /// </returns>
-        ValueTask<IAudioProvider> GetProviderAsync(Uri location);
+        IAudioProvider GetProvider(Uri location);
     }
 }

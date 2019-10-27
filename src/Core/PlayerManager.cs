@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -37,6 +38,12 @@ namespace Thermite.Core
         public ulong UserId { get; }
 
         /// <summary>
+        /// Gets a list of decoder factories which can be used to retrieve
+        /// audio frames from audio files.
+        /// </summary>
+        public IReadOnlyList<IAudioDecoderFactory> Decoders { get; }
+
+        /// <summary>
         /// Gets a list of provider factories which can be used to retrieve
         /// audio files from tracks.
         /// </summary>
@@ -54,6 +61,7 @@ namespace Thermite.Core
         public IReadOnlyList<IAudioTranscoderFactory> Transcoders { get; }
 
         internal PlayerManager(ulong userId, uint socketCount,
+            IReadOnlyList<IAudioDecoderFactory> decoders,
             IReadOnlyList<IAudioProviderFactory> providers,
             IReadOnlyList<ITrackSource> sources,
             IReadOnlyList<IAudioTranscoderFactory> transcoders)
@@ -61,6 +69,7 @@ namespace Thermite.Core
             UserId = userId;
             Providers = providers;
             Sources = sources;
+            Decoders = decoders;
             Transcoders = transcoders;
 
             _players = new ConcurrentDictionary<ulong, IPlayer>();
@@ -236,6 +245,54 @@ namespace Thermite.Core
             => _udpClients[unchecked(
                 (int)(guildId >> 22) % _udpClients.Count)];
 
+        internal bool TryGetProviderFactory(Uri location,
+            [NotNullWhen(true)]out IAudioProviderFactory? factory)
+        {
+            foreach (var providerFactory in Providers)
+            {
+                if (providerFactory.IsSupported(location))
+                {
+                    factory = providerFactory;
+                    return true;
+                }
+            }
+
+            factory = default;
+            return false;
+        }
+
+        internal bool TryGetTranscoderFactory(string codecType,
+            [NotNullWhen(true)]out IAudioTranscoderFactory? factory)
+        {
+            foreach (var transcoderFactory in Transcoders)
+            {
+                if (transcoderFactory.IsSupported(codecType))
+                {
+                    factory = transcoderFactory;
+                    return true;
+                }
+            }
+
+            factory = default;
+            return false;
+        }
+
+        internal bool TryGetDecoderFactory(string mediaType,
+            [NotNullWhen(true)]out IAudioDecoderFactory? factory)
+        {
+            foreach (var decoderFactory in Decoders)
+            {
+                if (decoderFactory.IsSupported(mediaType))
+                {
+                    factory = decoderFactory;
+                    return true;
+                }
+            }
+
+            factory = default;
+            return false;
+        }
+
         private struct PlayerInfo
         {
             public UserToken UserInfo;
@@ -245,13 +302,20 @@ namespace Thermite.Core
 
         private class SocketInfo
         {
-            public readonly Socket Socket;
+            private readonly Lazy<Socket> _socket;
             public IPEndPoint? DiscoveryEndPoint;
+
+            public Socket Socket => _socket.Value;
 
             public SocketInfo()
             {
-                Socket = new Socket(AddressFamily.InterNetwork,
-                    SocketType.Dgram, ProtocolType.Udp);
+                _socket = new Lazy<Socket>(CreateSocket, true);
+
+                static Socket CreateSocket()
+                {
+                    return new Socket(AddressFamily.InterNetwork,
+                        SocketType.Dgram, ProtocolType.Udp);
+                }
             }
         }
     }
