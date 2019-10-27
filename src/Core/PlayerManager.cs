@@ -12,6 +12,7 @@ using Thermite.Internal;
 using Thermite.Utilities;
 
 using static Thermite.Utilities.State;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Core
 {
@@ -187,7 +188,9 @@ namespace Thermite.Core
             if (_players.TryGetValue(guildId, out var player))
                 return player;
 
-            throw new InvalidOperationException("Connect to voice first");
+            ThrowInvalidOperationException("Connect to voice first");
+
+            return null; // not hit, above does not return
         }
 
         private IPlayer CreatePlayer(ulong guildId, PlayerInfo info)

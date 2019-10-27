@@ -17,6 +17,7 @@ using Thermite.Internal;
 using Thermite.Utilities;
 
 using static Thermite.Utilities.State;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Discord
 {
@@ -111,7 +112,7 @@ namespace Thermite.Discord
         public async Task SetSpeakingAsync(bool speaking, int delay = 0)
         {
             if (_state != Running)
-                throw new InvalidOperationException(
+                ThrowInvalidOperationException(
                     "Must be connected to set speaking");
 
             SendSpeaking(_serializer, speaking, delay, Ssrc);
@@ -329,7 +330,7 @@ namespace Thermite.Discord
             VoiceGatewayReady ready)
         {
             if (!ready.Modes.HasFlag(EncryptionModes.XSalsa20_Poly1305_Lite))
-                throw new InvalidOperationException(
+                ThrowInvalidOperationException(
                     "xsalsa20_poly1305_lite not supported");
 
             // ClientEndPoint is definitely assigned by this point due to

@@ -139,7 +139,7 @@ namespace Thermite.Internal
             }
 
             if (!wasEnqueued)
-                throw new InvalidUriException(nameof(location), location);
+                ThrowInvalidUriException(nameof(location), location);
         }
 
         /// <inheritdoc/>

@@ -1,7 +1,7 @@
 using System;
 
-using static Thermite.Utilities.ThrowHelpers;
 using static System.Threading.Interlocked;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Utilities
 {
@@ -37,7 +37,7 @@ namespace Thermite.Utilities
         public void ThrowIfDisposed(string? objectName)
         {
             if (_value > Disposing)
-                throw new ObjectDisposedException(objectName);
+                ThrowObjectDisposedException(objectName);
         }
     }
 }

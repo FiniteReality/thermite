@@ -9,24 +9,39 @@ namespace Thermite.Utilities
     {
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void ThrowInvalidOperationException(string message)
+        public static void ThrowArgumentException(string? paramName,
+            string? message)
         {
-            throw new InvalidOperationException(message);
+            throw new ArgumentException(message, paramName);
         }
 
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void ThrowArgumentOutOfRangeException(string paramName)
+        public static void ThrowArgumentOutOfRangeException(string? paramName)
         {
             throw new ArgumentOutOfRangeException(paramName);
         }
 
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void ThrowInvalidUriException(string paramName,
+        public static void ThrowInvalidOperationException(string? message)
+        {
+            throw new InvalidOperationException(message);
+        }
+
+        [DoesNotReturn]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowInvalidUriException(string? paramName,
             Uri location)
         {
             throw new InvalidUriException(paramName, location);
+        }
+
+        [DoesNotReturn]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowObjectDisposedException(string? objectName)
+        {
+            throw new ObjectDisposedException(objectName);
         }
     }
 }

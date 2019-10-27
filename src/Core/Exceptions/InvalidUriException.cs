@@ -17,7 +17,7 @@ namespace Thermite.Core
         /// <param name="value">
         /// The <see cref="Uri"/> which caused the exception.
         /// </param>
-        public InvalidUriException(string paramName, Uri value)
+        public InvalidUriException(string? paramName, Uri value)
             : base(paramName, value, GetMessage())
         {
         }
