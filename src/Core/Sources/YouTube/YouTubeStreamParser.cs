@@ -79,6 +79,9 @@ namespace Thermite.Core.Sources.YouTube
                 out var streamMap, out var playerResponse))
                 return false;
 
+            if (adaptiveStreams.IsEmpty && streamMap.IsEmpty)
+                return false;
+
             if (!TryParseAdaptiveStreams(adaptiveStreams,
                 out var bestAdaptiveStream))
                 return false;
@@ -111,7 +114,7 @@ namespace Thermite.Core.Sources.YouTube
                 var codecsIndex = mediaType.IndexOf(codecsString);
 
                 if (codecsIndex < 0)
-                    return null;
+                    return default;
 
                 var start = codecsIndex + codecsString.Length;
                 return mediaType[start..^1];

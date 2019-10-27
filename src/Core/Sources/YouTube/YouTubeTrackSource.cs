@@ -159,7 +159,9 @@ namespace Thermite.Core.Sources
             if (videoId != null)
                 return GetVideoTracksAsync(videoId, cancellationToken);
 
-            throw new InvalidUriException(nameof(location), location);
+            ThrowInvalidUriException(nameof(location), location);
+
+            return null; // not hit, above does not return
         }
 
         private async IAsyncEnumerable<TrackInfo> GetVideoTracksAsync(
@@ -167,7 +169,12 @@ namespace Thermite.Core.Sources
             [EnumeratorCancellation]
             CancellationToken cancellationToken = default)
         {
-            yield return await GetTrackInfoAsync(videoId, cancellationToken);
+            var info = await GetTrackInfoAsync(videoId, cancellationToken);
+
+            if (info == null)
+                ThrowArgumentException(nameof(videoId), "Invalid video ID");
+
+            yield return info.Value;
         }
 
         private async IAsyncEnumerable<TrackInfo> GetPlaylistTracks(
@@ -179,13 +186,18 @@ namespace Thermite.Core.Sources
             string? continuation = null;
             for (int pages = 0; pages < 6; pages++)
             {
+                bool success;
                 ReadOnlySequenceBuilder<byte> data;
                 if (continuation == null)
-                    data = await GetPlaylistContentsAsync(playlistId,
+                    (success, data) = await GetPlaylistContentsAsync(playlistId,
                         cancellationToken);
                 else
-                    data = await GetPlaylistContinuationAsync(continuation,
-                        cancellationToken);
+                    (success, data) = await GetPlaylistContinuationAsync(
+                        continuation, cancellationToken);
+
+                if (!success)
+                    ThrowArgumentException(nameof(playlistId),
+                        "Invalid playlist ID");
 
                 using (data)
                 {
@@ -193,7 +205,7 @@ namespace Thermite.Core.Sources
                     var sequence = data.AsSequence();
                     if (!YouTubePlaylistParser.TryReadPreamble(ref sequence,
                         ref state, out var alert))
-                        throw new InvalidOperationException(alert);
+                        ThrowInvalidOperationException(alert);
 
                     while (YouTubePlaylistParser.TryReadPlaylistItem(
                         ref sequence, ref state, out var videoId))
@@ -202,8 +214,12 @@ namespace Thermite.Core.Sources
                             foundStartVideo = true;
 
                         if (foundStartVideo)
-                            yield return await GetTrackInfoAsync(
-                                videoId);
+                        {
+                            var info = await GetTrackInfoAsync(videoId);
+
+                            if (info != null)
+                                yield return info.Value;
+                        }
                     }
 
                     if (!YouTubePlaylistParser.TryGetContinuation(ref sequence,
@@ -213,24 +229,30 @@ namespace Thermite.Core.Sources
             }
         }
 
-        private async ValueTask<TrackInfo> GetTrackInfoAsync(string videoId,
+        private async ValueTask<TrackInfo?> GetTrackInfoAsync(string videoId,
             CancellationToken cancellationToken = default)
         {
-            using var info = await GetVideoInfoAsync(videoId,
+            var (success, info) = await GetVideoInfoAsync(videoId,
                 cancellationToken);
-            var sequence = info.AsSequence();
 
-            if (!YoutubeStreamParser.GetBestStream(sequence, out var track))
-                throw new ArgumentException("Invalid video ID",
-                    nameof(videoId));
+            if (!success)
+                return default;
 
-            track.OriginalLocation = new Uri(
-                $"https://youtube.com/watch?v={videoId}");
+            using (info)
+            {
+                var sequence = info.AsSequence();
 
-            return track;
+                if (!YoutubeStreamParser.GetBestStream(sequence, out var track))
+                    return default;
+
+                track.OriginalLocation = new Uri(
+                    $"https://youtube.com/watch?v={videoId}");
+
+                return track;
+            }
         }
 
-        private async Task<ReadOnlySequenceBuilder<byte>>
+        private async Task<(bool, ReadOnlySequenceBuilder<byte>)>
             GetPlaylistContentsAsync(string playlistId,
                 CancellationToken cancellationToken = default)
         {
@@ -256,10 +278,10 @@ namespace Thermite.Core.Sources
                     break;
             }
 
-            return builder;
+            return (response.IsSuccessStatusCode, builder);
         }
 
-        private async Task<ReadOnlySequenceBuilder<byte>>
+        private async Task<(bool, ReadOnlySequenceBuilder<byte>)>
             GetPlaylistContinuationAsync(string continuation,
                 CancellationToken cancellationToken = default)
         {
@@ -286,11 +308,12 @@ namespace Thermite.Core.Sources
                     break;
             }
 
-            return builder;
+            return (response.IsSuccessStatusCode, builder);
         }
 
-        private async Task<ReadOnlySequenceBuilder<byte>> GetVideoInfoAsync(
-            string videoId, CancellationToken cancellationToken = default)
+        private async Task<(bool, ReadOnlySequenceBuilder<byte>)>
+            GetVideoInfoAsync(string videoId,
+                CancellationToken cancellationToken = default)
         {
             await _rateLimiter.WaitAsync(cancellationToken);
             using var response = await _client.GetAsync(
@@ -314,7 +337,7 @@ namespace Thermite.Core.Sources
                     break;
             }
 
-            return builder;
+            return (response.IsSuccessStatusCode, builder);
         }
     }
 }

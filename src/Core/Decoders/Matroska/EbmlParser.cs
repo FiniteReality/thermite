@@ -24,6 +24,9 @@ namespace Thermite.Core.Decoders.Matroska
 
     internal static partial class EbmlParser
     {
+        private const int MaxSupportedMatroskaVersion = 3;
+        private const int MaxSupportedWebmVersion = 2;
+
         private static readonly byte[] MatroskaDocType =
             Encoding.UTF8.GetBytes("matroska");
         private static readonly byte[] WebmDocType =
@@ -160,11 +163,11 @@ namespace Thermite.Core.Decoders.Matroska
                         return EbmlHandleStatus.MissingData;
 
                     if (state.DocumentType == MatroskaDocumentType.Matroska
-                        && version > 3)
+                        && version > MaxSupportedMatroskaVersion)
                         return EbmlHandleStatus.UnsupportedFile;
 
                     else if (state.DocumentType == MatroskaDocumentType.WebM
-                        && version > 2)
+                        && version > MaxSupportedWebmVersion)
                         return EbmlHandleStatus.UnsupportedFile;
 
                     buffer = buffer.Slice((int)length);
@@ -254,7 +257,7 @@ namespace Thermite.Core.Decoders.Matroska
                         out var isLaced))
                         return EbmlHandleStatus.MissingData;
 
-                    if (isLaced != 0) // audio
+                    if (isLaced != 0)
                         currentAudioTrack.IsLaced = true;
 
                     buffer = buffer.Slice((int)length);
