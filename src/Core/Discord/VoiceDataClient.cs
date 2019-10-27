@@ -33,6 +33,7 @@ namespace Thermite.Discord
         private readonly Timer _sendTimer;
         private readonly Socket _socket;
 
+        private int _failedReadAttempts;
         private ushort _packetSequence;
         private uint _timestamp;
 
@@ -85,6 +86,7 @@ namespace Thermite.Discord
 
             ref var sequence = ref client._packetSequence;
             ref var timestamp = ref client._timestamp;
+            ref var failedReadAttempts = ref client._failedReadAttempts;
 
             var ssrc = client._ssrc;
             var endpoint = client._remoteEndPoint!;
@@ -94,8 +96,20 @@ namespace Thermite.Discord
                 new ReadOnlySequence<byte>(SilenceBuffer);
             var readSuccess = reader.TryRead(out var readResult);
 
-            if (readSuccess)
+            if (!readSuccess)
+            {
+                // adapt to potential buffer underruns in the underlying pipe
+                if (failedReadAttempts++ < 3)
+                {
+                    timer.Change(1, Timeout.Infinite);
+                    return;
+                }
+            }
+            else
+            {
+                failedReadAttempts = 0;
                 buffer = readResult.Buffer;
+            }
 
             if (!TryReadPacket(ref buffer, out var packet))
                 return;
