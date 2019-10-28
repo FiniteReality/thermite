@@ -179,6 +179,9 @@ namespace Thermite.Core.Decoders.Matroska
                 if (elementLengthSize > 8)
                     return false;
 
+                if (sequence.Length < elementLengthSize)
+                    return false;
+
                 if (sequence.FirstSpan.Length > elementLengthSize)
                 {
                     elementLength = sequence.FirstSpan[0];
@@ -218,6 +221,9 @@ namespace Thermite.Core.Decoders.Matroska
                     (sequence.FirstSpan[0] & 0xF0U) << 24) + 1;
 
                 if (elementClass > 4)
+                    return false;
+
+                if (sequence.Length < elementClass)
                     return false;
 
                 if (sequence.FirstSpan.Length > elementClass)
