@@ -1,5 +1,5 @@
 # Supported Providers #
 
-|   Provider | Implemented? | Usable? |
-|------------|--------------|---------|
-
+|  Provider  |            Implemented?             | Usable? |
+|------------|-------------------------------------|---------|
+| YouTube    | Some edge cases may not be handled. | Yes     |
