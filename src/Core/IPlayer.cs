@@ -9,6 +9,12 @@ namespace Thermite.Core
     public interface IPlayer
     {
         /// <summary>
+        /// Gets a <see cref="TrackInfo"/> struct representing the current
+        /// playing track.
+        /// </summary>
+        TrackInfo CurrentTrack { get; }
+
+        /// <summary>
         /// Enqueues any tracks which may be found at the given
         /// <see cref="Uri"/> for playback.
         /// </summary>

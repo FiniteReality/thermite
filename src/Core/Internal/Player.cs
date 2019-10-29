@@ -42,9 +42,6 @@ namespace Thermite.Internal
         private CancellationTokenSource? _stopCancelTokenSource;
         private Task? _runTask;
 
-        public IPEndPoint? ClientEndPoint
-            => _gatewayClient.ClientEndPoint;
-
         public event EventHandler<IPEndPoint> ClientEndPointUpdated
         {
             add { _gatewayClient.ClientEndPointUpdated += value; }
@@ -54,7 +51,10 @@ namespace Thermite.Internal
         public event EventHandler<UnobservedTaskExceptionEventArgs>?
             ProcessingException;
 
-        public PipeWriter Writer => _dataClient.Writer;
+        private PipeWriter Writer => _dataClient.Writer;
+
+        /// <inheritdoc/>
+        public TrackInfo CurrentTrack { get; private set; }
 
         public Player(PlayerManager manager, ILogger logger,
             UserToken userInfo, Socket socket, Uri endpoint,
@@ -198,6 +198,8 @@ namespace Thermite.Internal
 
                 _logger.LogInformation("Playing {title} ({url})",
                     info.TrackName, info.OriginalLocation);
+
+                CurrentTrack = info;
 
                 try
                 {
