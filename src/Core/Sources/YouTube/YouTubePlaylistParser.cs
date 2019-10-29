@@ -10,6 +10,8 @@ namespace Thermite.Core.Sources.YouTube
     {
         private static readonly byte[] PlaylistVideoListRendererProperty =
             Encoding.UTF8.GetBytes("playlistVideoListRenderer");
+        private static readonly byte[] PlaylistVideoListContinuationProperty =
+            Encoding.UTF8.GetBytes("playlistVideoListContinuation");
         private static readonly byte[] AlertsProperty =
             Encoding.UTF8.GetBytes("alerts");
         private static readonly byte[] AlertRendererProperty =
@@ -33,7 +35,9 @@ namespace Thermite.Core.Sources.YouTube
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
                     if (reader.ValueTextEquals(
-                        PlaylistVideoListRendererProperty))
+                        PlaylistVideoListRendererProperty)
+                        || reader.ValueTextEquals(
+                        PlaylistVideoListContinuationProperty))
                     {
                         sequence = sequence.Slice(reader.Position);
                         state = reader.CurrentState;
