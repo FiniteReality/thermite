@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Immutable;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Core
@@ -10,6 +12,7 @@ namespace Thermite.Core
     public class PlayerManagerBuilder
     {
         private readonly ulong _userId;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ImmutableList<IAudioDecoderFactory>.Builder _decoders;
         private readonly ImmutableList<IAudioProviderFactory>.Builder
             _providers;
@@ -26,9 +29,45 @@ namespace Thermite.Core
         /// <param name="userId">
         /// The user ID to perform all connections as.
         /// </param>
-        public PlayerManagerBuilder(ulong userId)
+        /// <param name="services">
+        /// The service provider to locate any existing services from.
+        /// </param>
+        public PlayerManagerBuilder(ulong userId, IServiceProvider services)
         {
             _userId = userId;
+            _loggerFactory = services.GetRequiredService<ILoggerFactory>();
+            _decoders = ImmutableList.CreateBuilder<IAudioDecoderFactory>();
+            _providers = ImmutableList.CreateBuilder<IAudioProviderFactory>();
+            _sources = ImmutableList.CreateBuilder<ITrackSource>();
+            _transcoders = ImmutableList
+                .CreateBuilder<IAudioTranscoderFactory>();
+
+            _socketCount = 20;
+
+            _decoders.AddRange(
+                services.GetServices<IAudioDecoderFactory>());
+            _providers.AddRange(
+                services.GetServices<IAudioProviderFactory>());
+            _sources.AddRange(
+                services.GetServices<ITrackSource>());
+            _transcoders.AddRange(
+                services.GetServices<IAudioTranscoderFactory>());
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="PlayerManagerBuilder"/>
+        /// type.
+        /// </summary>
+        /// <param name="userId">
+        /// The user ID to perform all connections as.
+        /// </param>
+        /// <param name="loggerFactory">
+        /// The logger factory to use for any logging events which may occur.
+        /// </param>
+        public PlayerManagerBuilder(ulong userId, ILoggerFactory loggerFactory)
+        {
+            _userId = userId;
+            _loggerFactory = loggerFactory;
             _decoders = ImmutableList.CreateBuilder<IAudioDecoderFactory>();
             _providers = ImmutableList.CreateBuilder<IAudioProviderFactory>();
             _sources = ImmutableList.CreateBuilder<ITrackSource>();
@@ -114,6 +153,7 @@ namespace Thermite.Core
         public PlayerManager Build()
         {
             return new PlayerManager(_userId, _socketCount,
+                _loggerFactory,
                 _decoders.ToImmutable(),
                 _providers.ToImmutable(),
                 _sources.ToImmutable(),

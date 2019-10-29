@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Thermite.Core.Sources.YouTube;
 using Thermite.Internal;
 
@@ -70,6 +71,7 @@ namespace Thermite.Core.Sources
         }
 
         private readonly HttpClient _client;
+        private readonly ILogger _logger;
         private readonly SemaphoreSlim _rateLimiter;
         private readonly Random _rateLimiterRandomness;
         private readonly Timer _rateLimiterTimer;
@@ -79,14 +81,19 @@ namespace Thermite.Core.Sources
         /// Creates a new instance of the <see cref="YouTubeTrackSource"/>
         /// type.
         /// </summary>
+        /// <param name="loggerFactory">
+        /// The <see cref="ILoggerFactory"/> used for creating instances of
+        /// <see cref="ILogger"/>.
+        /// </param>
         /// <param name="clientFactory">
         /// The <see cref="IHttpClientFactory"/> used for creating instances of
         /// <see cref="HttpClient"/>.
         /// </param>
-        public YouTubeTrackSource(IHttpClientFactory clientFactory)
+        public YouTubeTrackSource(ILoggerFactory loggerFactory,
+            IHttpClientFactory clientFactory)
         {
-            _client = clientFactory.CreateClient(
-                "urn:thermite:http_client/youtube");
+            _client = clientFactory.CreateClient(nameof(YouTubeTrackSource));
+            _logger = loggerFactory.CreateLogger<YouTubeTrackSource>();
 
             _client.DefaultRequestHeaders.Add("x-youtube-client-name", "1");
             _client.DefaultRequestHeaders.Add("x-youtube-client-version",
@@ -112,6 +119,10 @@ namespace Thermite.Core.Sources
             // cost of slightly slower video access times.
             var random = source._rateLimiterRandomness;
             var nextTime = 10000 + random.Next(-3500, 5500);
+
+            source._logger.LogTrace("Ratelimit resetting in {timeout}ms",
+                nextTime);
+
             source._rateLimiterTimer.Change(nextTime, Timeout.Infinite);
         }
 
@@ -152,8 +163,11 @@ namespace Thermite.Core.Sources
             if (videoId == null && playlistId == null)
                 ThrowInvalidUriException(nameof(location), location);
 
+            _logger.LogDebug("Video ID: {videoId}\nPlaylist ID: {playlistId}",
+                videoId ?? "(null)", playlistId ?? "(null)");
+
             if (playlistId != null)
-                return GetPlaylistTracks(playlistId, videoId,
+                return GetPlaylistTracksAsync(playlistId, videoId,
                     cancellationToken);
 
             if (videoId != null)
@@ -177,14 +191,15 @@ namespace Thermite.Core.Sources
             yield return info.Value;
         }
 
-        private async IAsyncEnumerable<TrackInfo> GetPlaylistTracks(
+        private async IAsyncEnumerable<TrackInfo> GetPlaylistTracksAsync(
             string playlistId, string? startVideoId,
                 [EnumeratorCancellation]
                 CancellationToken cancellationToken = default)
         {
             bool foundStartVideo = startVideoId == null;
             string? continuation = null;
-            for (int pages = 0; pages < 6; pages++)
+
+            while (true)
             {
                 bool success;
                 ReadOnlySequenceBuilder<byte> data;
@@ -199,6 +214,8 @@ namespace Thermite.Core.Sources
                     ThrowArgumentException(nameof(playlistId),
                         "Invalid playlist ID");
 
+                using (_logger.BeginScope("Enumerating playlist: {playlistId}",
+                    playlistId))
                 using (data)
                 {
                     JsonReaderState state = default;
@@ -210,6 +227,8 @@ namespace Thermite.Core.Sources
                     while (YouTubePlaylistParser.TryReadPlaylistItem(
                         ref sequence, ref state, out var videoId))
                     {
+                        _logger.LogInformation("Found video ID {videoId}",
+                            videoId);
                         if (!foundStartVideo && videoId == startVideoId)
                             foundStartVideo = true;
 
@@ -225,6 +244,10 @@ namespace Thermite.Core.Sources
                     if (!YouTubePlaylistParser.TryGetContinuation(ref sequence,
                         ref state, out continuation))
                         break;
+
+                    if (continuation != null)
+                        _logger.LogDebug("Got continuation {continuation}",
+                            continuation);
                 }
             }
         }
@@ -244,6 +267,9 @@ namespace Thermite.Core.Sources
 
                 if (!YoutubeStreamParser.GetBestStream(sequence, out var track))
                     return default;
+
+                _logger.LogTrace("Got best stream: {stream}",
+                    track.AudioLocation);
 
                 track.OriginalLocation = new Uri(
                     $"https://youtube.com/watch?v={videoId}");
@@ -316,8 +342,13 @@ namespace Thermite.Core.Sources
                 CancellationToken cancellationToken = default)
         {
             await _rateLimiter.WaitAsync(cancellationToken);
-            using var response = await _client.GetAsync(
-                $"https://youtube.com/get_video_info?video_id={videoId}",
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"https://youtube.com/get_video_info?video_id={videoId}");
+
+            request.Headers.Referrer = new Uri(
+                $"https://youtube.com/watch?v={videoId}");
+
+            using var response = await _client.SendAsync(request,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
             using var content = response.Content;

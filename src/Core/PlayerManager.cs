@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Thermite.Discord;
 using Thermite.Internal;
 using Thermite.Utilities;
@@ -28,6 +29,8 @@ namespace Thermite.Core
         private static readonly byte[] EndpointSuffixU8 =
             Encoding.UTF8.GetBytes(EndpointSuffix);
 
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ConcurrentDictionary<ulong, IPlayer> _players;
         private readonly ImmutableDictionary<int, SocketInfo> _udpClients;
 
@@ -61,7 +64,14 @@ namespace Thermite.Core
         /// </summary>
         public IReadOnlyList<IAudioTranscoderFactory> Transcoders { get; }
 
+        /// <summary>
+        /// An event which is thrown when a player task throws an exception.
+        /// </summary>
+        public event EventHandler<UnobservedTaskExceptionEventArgs>?
+            PlayerProcessingException;
+
         internal PlayerManager(ulong userId, uint socketCount,
+            ILoggerFactory loggerFactory,
             IReadOnlyList<IAudioDecoderFactory> decoders,
             IReadOnlyList<IAudioProviderFactory> providers,
             IReadOnlyList<ITrackSource> sources,
@@ -73,6 +83,8 @@ namespace Thermite.Core
             Decoders = decoders;
             Transcoders = transcoders;
 
+            _logger = loggerFactory.CreateLogger<PlayerManager>();
+            _loggerFactory = loggerFactory;
             _players = new ConcurrentDictionary<ulong, IPlayer>();
 
             var builder = ImmutableDictionary.CreateBuilder<int, SocketInfo>();
@@ -131,6 +143,8 @@ namespace Thermite.Core
             ReadOnlySpan<char> sessionId, ReadOnlySpan<char> endpoint,
             ReadOnlySpan<char> token)
         {
+            _logger.LogDebug("Updating voice state for {guildId}", guildId);
+
             var player = _players.GetOrAdd(guildId, CreatePlayer,
                 new PlayerInfo
                 {
@@ -152,6 +166,8 @@ namespace Thermite.Core
             ReadOnlySpan<byte> sessionId, ReadOnlySpan<byte> endpoint,
             ReadOnlySpan<byte> token)
         {
+            _logger.LogDebug("Updating voice state for {guildId}", guildId);
+
             var player = _players.GetOrAdd(guildId, CreatePlayer,
                 new PlayerInfo
                 {
@@ -195,14 +211,24 @@ namespace Thermite.Core
 
         private IPlayer CreatePlayer(ulong guildId, PlayerInfo info)
         {
-            var player = new Player(this, info.UserInfo,
+            var logger = _loggerFactory.CreateLogger<Player>();
+            var player = new Player(this, logger, info.UserInfo,
                 info.SocketInfo.Socket, info.EndPoint,
                 info.SocketInfo.DiscoveryEndPoint);
 
             player.ClientEndPointUpdated +=
                 (_, endPoint) =>
                 {
+                    _logger.LogTrace(
+                        "Socket endpoint for {guildId} updated to {endpoint}",
+                        guildId, endPoint);
                     info.SocketInfo.DiscoveryEndPoint = endPoint;
+                };
+
+            player.ProcessingException +=
+                (sender, args) =>
+                {
+                    PlayerProcessingException?.Invoke(sender, args);
                 };
 
             player.Start();
