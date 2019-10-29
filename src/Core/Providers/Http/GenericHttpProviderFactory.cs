@@ -36,8 +36,7 @@ namespace Thermite.Core.Providers
         /// <inheritdoc/>
         public IAudioProvider GetProvider(Uri location)
         {
-            var client = _clientFactory.CreateClient();
-            return new HttpAudioProvider(client, location);
+            return new HttpAudioProvider(_clientFactory, location);
         }
     }
 }

@@ -23,9 +23,10 @@ namespace Thermite.Core.Providers.Http
 
         private HttpResponseMessage? _response;
 
-        internal HttpAudioProvider(HttpClient client, Uri location)
+        internal HttpAudioProvider(IHttpClientFactory clientFactory,
+            Uri location)
         {
-            _client = client;
+            _client = clientFactory.CreateClient(nameof(HttpAudioProvider));
             _dataPipe = new Pipe(PipeOptions);
             _location = location;
 
