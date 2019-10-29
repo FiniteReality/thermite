@@ -28,7 +28,7 @@ Feel free to join my Discord server: https://discord.gg/Y4d9ZWJ
 ## Documentation ##
 
 - Supported [Codecs and Container Formats](audio/codecs.md)
-- Supported [Providers](audio/providers.md)
+- Supported [Sources](audio/sources.md)
 
 ## Contributing ##
 
