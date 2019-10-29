@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Thermite.Core;
 using Thermite.Discord;
 using Thermite.Utilities;
@@ -32,6 +33,7 @@ namespace Thermite.Internal
         private readonly VoiceDataClient _dataClient;
         private readonly Uri _endpoint;
         private readonly VoiceGatewayClient _gatewayClient;
+        private readonly ILogger _logger;
         private readonly PlayerManager _manager;
         private readonly Channel<TrackInfo> _trackQueue;
 
@@ -49,16 +51,21 @@ namespace Thermite.Internal
             remove { _gatewayClient.ClientEndPointUpdated -= value; }
         }
 
+        public event EventHandler<UnobservedTaskExceptionEventArgs>?
+            ProcessingException;
+
         public PipeWriter Writer => _dataClient.Writer;
 
-        public Player(PlayerManager manager, UserToken userInfo, Socket socket,
-            Uri endpoint, IPEndPoint? clientEndPoint)
+        public Player(PlayerManager manager, ILogger logger,
+            UserToken userInfo, Socket socket, Uri endpoint,
+            IPEndPoint? clientEndPoint)
         {
             _connectMutex = new SemaphoreSlim(initialCount: 0);
             _endpoint = endpoint;
             _gatewayClient = new VoiceGatewayClient(userInfo, socket,
                 clientEndPoint);
             _dataClient = new VoiceDataClient(_gatewayClient, socket);
+            _logger = logger;
             _manager = manager;
             _trackQueue = Channel.CreateUnbounded<TrackInfo>(QueueOptions);
 
@@ -101,8 +108,12 @@ namespace Thermite.Internal
         {
             _state.ThrowIfDisposed(nameof(Player));
 
-            if (_state.TryTransition(from: Initialized, to: Started) != Initialized)
-                ThrowInvalidOperationException("Cannot start when already started");
+            if (_state.TryTransition(from: Initialized, to: Started)
+                != Initialized)
+                ThrowInvalidOperationException(
+                    "Cannot start when already started");
+
+            _logger.LogInformation("Starting player");
 
             _stopCancelTokenSource = new CancellationTokenSource();
             _runTask = RunAsync(_stopCancelTokenSource.Token);
@@ -115,6 +126,8 @@ namespace Thermite.Internal
             if (_state != Started)
                 ThrowInvalidOperationException("Cannot stop when not started");
 
+            _logger.LogInformation("Stopping player");
+
             // If we're running, then this is assigned
             _stopCancelTokenSource!.Cancel();
             await _runTask!;
@@ -123,8 +136,6 @@ namespace Thermite.Internal
         /// <inheritdoc/>
         public async ValueTask EnqueueAsync(Uri location)
         {
-            bool wasEnqueued = false;
-
             foreach (var source in _manager.Sources)
             {
                 if (source.IsSupported(location))
@@ -133,13 +144,13 @@ namespace Thermite.Internal
                         .GetTracksAsync(location))
                     {
                         await _trackQueue.Writer.WriteAsync(track);
-                        wasEnqueued = true;
                     }
+
+                    return;
                 }
             }
 
-            if (!wasEnqueued)
-                ThrowInvalidUriException(nameof(location), location);
+            ThrowInvalidUriException(nameof(location), location);
         }
 
         /// <inheritdoc/>
@@ -185,73 +196,91 @@ namespace Thermite.Internal
             {
                 var info = await queueReader.ReadAsync(cancellationToken);
 
-                if (!_manager.TryGetProviderFactory(info.AudioLocation,
-                    out var providerFactory))
+                _logger.LogInformation("Playing {title} ({url})",
+                    info.TrackName, info.OriginalLocation);
+
+                try
                 {
-                    continue; // skip this track since we can't retrieve it
+                    await ProcessQueueItemAsync(info, cancellationToken);
                 }
-
-                using var sessionCancelToken = new CancellationTokenSource();
-                using var linkedCancelToken = CancellationTokenSource
-                    .CreateLinkedTokenSource(cancellationToken,
-                        sessionCancelToken.Token);
-
-                await using var provider = providerFactory
-                    .GetProvider(info.AudioLocation);
-                var providerTask = provider.RunAsync(linkedCancelToken.Token);
-                var mediaType = info.MediaTypeOverride ??
-                    await provider.IdentifyMediaTypeAsync(
-                        linkedCancelToken.Token);
-
-                if (!_manager.TryGetDecoderFactory(mediaType,
-                    out var decoderFactory))
+                catch (OperationCanceledException)
+                    when (!cancellationToken.IsCancellationRequested)
+                { /* expected for unsupported tracks */ }
+                catch (Exception e)
                 {
-                    sessionCancelToken.Cancel();
-                    try
+                    if (!(e is AggregateException aggregate))
+                        aggregate = new AggregateException(e);
+
+                    var args = new UnobservedTaskExceptionEventArgs(aggregate);
+                    ProcessingException?.Invoke(this, args);
+
+                    if (!args.Observed)
                     {
-                        await providerTask;
+                        _logger.LogError(aggregate,
+                            "Unhandled exception occured while processing " +
+                            "queue. Track {url} may be skipped.",
+                            info.OriginalLocation);
                     }
-                    catch (OperationCanceledException)
-                    { /* no-op */ }
-                    continue; // skip this track since we can't decode it
                 }
+            }
+        }
 
-                await using var decoder = decoderFactory.GetDecoder(
-                    provider.Output);
-                var decoderTask = decoder.RunAsync(linkedCancelToken.Token);
-                var codecType = info.CodecTypeOverride ??
-                    await decoder.IdentifyCodecAsync(linkedCancelToken.Token);
+        private async Task ProcessQueueItemAsync(
+            TrackInfo info,
+            CancellationToken cancellationToken = default)
+        {
+            if (!_manager.TryGetProviderFactory(info.AudioLocation,
+                out var providerFactory))
+                return;
 
-                if (codecType == null)
-                {
-                    sessionCancelToken.Cancel();
-                    try
-                    {
-                        await providerTask;
-                        await decoderTask;
-                    }
-                    catch (OperationCanceledException)
-                    { /* no-op */ }
-                    continue; // skip this track since we can't identify it
-                }
+            using var sessionCancelToken = new CancellationTokenSource();
+            using var linkedCancelToken = CancellationTokenSource
+                .CreateLinkedTokenSource(cancellationToken,
+                    sessionCancelToken.Token);
 
-                if (!_manager.TryGetTranscoderFactory(codecType,
-                    out var transcoderFactory))
-                {
-                    sessionCancelToken.Cancel();
-                    try
-                    {
-                        await providerTask;
-                        await decoderTask;
-                    }
-                    catch (OperationCanceledException)
-                    { /* no-op */ }
-                    continue; // skip this track since we can't transcode it
-                }
+            await using var provider = providerFactory
+                .GetProvider(info.AudioLocation);
 
-                await using var transcoder = transcoderFactory.GetTranscoder(
-                    codecType, decoder.Output);
+            var providerTask = provider.RunAsync(linkedCancelToken.Token);
+            var mediaType = info.MediaTypeOverride ??
+                await provider.IdentifyMediaTypeAsync(
+                    linkedCancelToken.Token);
 
+            if (!_manager.TryGetDecoderFactory(mediaType,
+                out var decoderFactory))
+            {
+                sessionCancelToken.Cancel();
+                await providerTask;
+                return;
+            }
+
+            await using var decoder = decoderFactory.GetDecoder(
+                provider.Output);
+
+            var decoderTask = decoder.RunAsync(linkedCancelToken.Token);
+            var codecType = info.CodecTypeOverride ??
+                await decoder.IdentifyCodecAsync(linkedCancelToken.Token);
+
+            if (codecType == null)
+            {
+                sessionCancelToken.Cancel();
+                await Task.WhenAll(providerTask, decoderTask);
+                return;
+            }
+
+            if (!_manager.TryGetTranscoderFactory(codecType,
+                out var transcoderFactory))
+            {
+                sessionCancelToken.Cancel();
+                await Task.WhenAll(providerTask, decoderTask);
+                return;
+            }
+
+            await using var transcoder = transcoderFactory.GetTranscoder(
+                codecType, decoder.Output);
+
+            try
+            {
                 await Task.WhenAll(
                     transcoder.RunAsync(linkedCancelToken.Token),
                     transcoder.Output.CopyToAsync(Writer,
@@ -259,7 +288,12 @@ namespace Thermite.Internal
                     decoderTask,
                     providerTask);
             }
-            Console.WriteLine("WHY ARE WE NOT PROCESSING THE QUEUE???");
+            finally
+            {
+                // Cancel our session token just in case any tasks are still
+                // running.
+                sessionCancelToken.Cancel();
+            }
         }
     }
 }
