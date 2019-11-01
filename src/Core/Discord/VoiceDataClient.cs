@@ -26,7 +26,7 @@ namespace Thermite.Discord
             12 + AuthenticationCodeSize + 4; // rtp + mac + nonce
 
         private static readonly byte[] SilenceBuffer =
-            new byte[]{ 0x03, 0x00, 0xF8, 0xFF, 0xFE };
+            new byte[] { 0x03, 0x00, 0xF8, 0xFF, 0xFE };
 
         private readonly VoiceGatewayClient _gateway;
         private readonly Pipe _inputPipe;
@@ -51,18 +51,15 @@ namespace Thermite.Discord
                 Timeout.Infinite, Timeout.Infinite);
             _socket = socket;
 
-            gateway.ClientSsrcUpdated += (_, ssrc) =>
-            {
+            gateway.ClientSsrcUpdated += (_, ssrc) => {
                 _ssrc = ssrc;
             };
 
-            gateway.RemoteEndPointUpdated += (_, endpoint) =>
-            {
+            gateway.RemoteEndPointUpdated += (_, endpoint) => {
                 _remoteEndPoint = endpoint;
             };
 
-            gateway.SessionEncryptionKeyUpdated += (_, key) =>
-            {
+            gateway.SessionEncryptionKeyUpdated += (_, key) => {
                 _sessionEncryptionKey = key;
             };
         }

@@ -116,7 +116,7 @@ namespace Thermite.Discord
                         ref buffer, cancellationToken))
                     {
                         consumed = buffer.Start;
-                        examined = consumed;;
+                        examined = consumed;
 
                         if (_serializer.BytesCommitted > 0)
                             flushResult = await FlushWritePipe(

@@ -61,7 +61,7 @@ namespace Thermite.Core.Sources.YouTube
             Encoding.UTF8.GetBytes("audio/webm; codecs=\"opus\""), // -0
             Encoding.UTF8.GetBytes("audio/mp4; codecs=\"mp4a.40.2\""), // -1
 
-            // TODO: these are based on quality level for 
+            // TODO: these are based on quality level for
             Encoding.UTF8.GetBytes(
                 "video/mp4; codecs=\"avc1.64001F, mp4a.40.2\""), // -2
             Encoding.UTF8.GetBytes(

@@ -11,7 +11,7 @@ namespace Thermite.Core
         /// <summary>
         /// Gets a <see cref="TrackInfo"/> struct representing the current
         /// playing track.
-        /// </summary>
+        /// /// </summary>
         TrackInfo CurrentTrack { get; }
 
         /// <summary>

@@ -136,7 +136,7 @@ namespace Thermite.Internal
 
             while (readHead < buffer.Length)
             {
-                switch(buffer[readHead])
+                switch (buffer[readHead])
                 {
                     case (byte)'+':
                         buffer[writeHead++] = (byte)' ';
@@ -181,7 +181,7 @@ namespace Thermite.Internal
 
                 for (int i = 0; i < 2; i++)
                 {
-                    var shift = (1-i) * 4;
+                    var shift = (1 - i) * 4;
 
                     if (buffer[i] >= (byte)'0' && buffer[i] <= (byte)'9')
                         hexByte |= (byte)((buffer[i] - (byte)'0') << shift);

@@ -7,7 +7,7 @@ namespace Thermite.Core.Transcoders.Opus
     /// <summary>
     /// A transcoder which performs no operation on the audio data as it passes
     /// through.
-    /// </summary>
+    /// /// </summary>
     public sealed class OpusAudioPassthroughTranscoder : IAudioTranscoder
     {
         /// <inheritdoc/>

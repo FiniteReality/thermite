@@ -29,8 +29,8 @@ consumer needs to understand how to decode the contents.
 
 To illustrate, a frame looks something like this:
 
-     0                   1           
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 
+     0                   1
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |          Data Length          |
     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+

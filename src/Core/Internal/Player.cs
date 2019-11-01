@@ -69,8 +69,7 @@ namespace Thermite.Internal
             _manager = manager;
             _trackQueue = Channel.CreateUnbounded<TrackInfo>(QueueOptions);
 
-            _gatewayClient.Ready += (_, __) =>
-            {
+            _gatewayClient.Ready += (_, __) => {
                 _connectMutex.Release();
             };
 

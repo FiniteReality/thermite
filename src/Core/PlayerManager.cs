@@ -217,8 +217,7 @@ namespace Thermite.Core
                 info.SocketInfo.DiscoveryEndPoint);
 
             player.ClientEndPointUpdated +=
-                (_, endPoint) =>
-                {
+                (_, endPoint) => {
                     _logger.LogTrace(
                         "Socket endpoint for {guildId} updated to {endpoint}",
                         guildId, endPoint);
@@ -226,8 +225,7 @@ namespace Thermite.Core
                 };
 
             player.ProcessingException +=
-                (sender, args) =>
-                {
+                (sender, args) => {
                     PlayerProcessingException?.Invoke(sender, args);
                 };
 
