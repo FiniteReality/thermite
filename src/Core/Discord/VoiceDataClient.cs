@@ -160,6 +160,9 @@ namespace Thermite.Discord
                 if (!reader.TryReadLittleEndian(out short packetLength))
                     return false;
 
+                if (sequence.Length < packetLength)
+                    return false;
+
                 packet = sequence.Slice(reader.Position, packetLength);
                 sequence = packet.Slice(reader.Position)
                     .Slice(packetLength);

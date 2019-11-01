@@ -150,7 +150,7 @@ namespace Thermite.Core.Sources.YouTube
                 ArrayPool<byte>.Shared.Return(buffer);
                 return status;
 
-                bool ParseInternal(Span<byte> buffer, out string? title)
+                static bool ParseInternal(Span<byte> buffer, out string? title)
                 {
                     title = default;
                     if (!TryUrlDecode(buffer, out var decodedLength))

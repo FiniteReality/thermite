@@ -133,7 +133,10 @@ namespace Thermite.Core.Decoders
         {
             return new ValueTask<string?>(_bestAudioTrack.CodecId switch
             {
-                MatroskaCodec.Opus => KnownAudioCodecs.Opus,
+                MatroskaCodec.Opus =>
+                    $"{KnownAudioCodecs.Opus}/" +
+                    $"{(int)_bestAudioTrack.SampleRate}/" +
+                    $"{_bestAudioTrack.ChannelCount}",
                 _ => null,
             });
         }

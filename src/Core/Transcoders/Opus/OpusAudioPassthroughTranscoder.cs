@@ -5,15 +5,15 @@ using System.Threading.Tasks;
 namespace Thermite.Core.Transcoders.Opus
 {
     /// <summary>
-    /// A transcoder which transcodes Opus packets to Discord-compatible Opus
-    /// packets.
+    /// A transcoder which performs no operation on the audio data as it passes
+    /// through.
     /// </summary>
-    public sealed class OpusAudioTranscoder : IAudioTranscoder
+    public sealed class OpusAudioPassthroughTranscoder : IAudioTranscoder
     {
         /// <inheritdoc/>
         public PipeReader Output { get; }
 
-        internal OpusAudioTranscoder(string codecInfo, PipeReader input)
+        internal OpusAudioPassthroughTranscoder(PipeReader input)
         {
             Output = input;
         }
