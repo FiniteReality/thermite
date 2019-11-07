@@ -62,7 +62,10 @@ namespace Thermite.Core.Transcoders.Opus
             }
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Finalizes an instance of
+        /// <see cref="OpusAudioResamplingTranscoder"/>.
+        /// </summary>
         ~OpusAudioResamplingTranscoder()
         {
             _ = DisposeAsync();

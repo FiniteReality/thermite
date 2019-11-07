@@ -6,10 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Core.Decoders.Matroska;
 
-namespace Thermite.Core.Decoders
+namespace Thermite.Core.Decoders.Matroska
 {
     /// <summary>
-    /// A transcoder for transcoding Matroska and WEBM audio files to Opus.
+    /// A decoder for decoding Matroska and WEBM audio files.
     /// </summary>
     public sealed class MatroskaAudioDecoder : IAudioDecoder
     {
