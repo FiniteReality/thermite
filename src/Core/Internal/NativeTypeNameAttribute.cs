@@ -3,9 +3,10 @@ using System;
 namespace Thermite.Utilities
 {
     [AttributeUsage(
-        AttributeTargets.Struct |
+        AttributeTargets.Field |
+        AttributeTargets.Parameter |
         AttributeTargets.ReturnValue |
-        AttributeTargets.Parameter,
+        AttributeTargets.Struct,
         AllowMultiple = false,
         Inherited = false)]
     internal class NativeTypeNameAttribute : Attribute

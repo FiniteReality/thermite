@@ -5,7 +5,7 @@ using System.Text;
 
 using static Thermite.Internal.ParsingUtilities;
 
-namespace Thermite.Core.Decoders.Matroska
+namespace Thermite.Decoders.Matroska
 {
     internal enum EbmlHandleStatus
     {
@@ -34,6 +34,12 @@ namespace Thermite.Core.Decoders.Matroska
 
         private static readonly byte[] OpusCodecType =
             Encoding.UTF8.GetBytes("A_OPUS");
+        private static readonly byte[] MpegLayer3CodecType =
+            Encoding.UTF8.GetBytes("A_MPEG/L3");
+        private static readonly byte[] MpegLayer2CodecType =
+            Encoding.UTF8.GetBytes("A_MPEG/L2");
+        private static readonly byte[] MpegLayer1CodecType =
+            Encoding.UTF8.GetBytes("A_MPEG/L1");
 
         public static EbmlHandleStatus TryHandleEbmlElement(
             ref MatroskaState state, ref MatroskaTrack currentAudioTrack,
@@ -286,6 +292,12 @@ namespace Thermite.Core.Decoders.Matroska
                     var codec = buffer.Slice(0, (int)length);
                     if (SequenceEqual(codec, OpusCodecType))
                         currentAudioTrack.CodecId = MatroskaCodec.Opus;
+                    else if (SequenceEqual(codec, MpegLayer3CodecType))
+                        currentAudioTrack.CodecId = MatroskaCodec.MpegLayer3;
+                    else if (SequenceEqual(codec, MpegLayer2CodecType))
+                        currentAudioTrack.CodecId = MatroskaCodec.MpegLayer2;
+                    else if (SequenceEqual(codec, MpegLayer1CodecType))
+                        currentAudioTrack.CodecId = MatroskaCodec.MpegLayer1;
                     else
                         return EbmlHandleStatus.UnsupportedFile;
 

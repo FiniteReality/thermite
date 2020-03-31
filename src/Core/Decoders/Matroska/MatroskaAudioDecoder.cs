@@ -1,12 +1,13 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using Thermite.Core.Decoders.Matroska;
+using Thermite.Codecs;
 
-namespace Thermite.Core.Decoders.Matroska
+namespace Thermite.Decoders.Matroska
 {
     /// <summary>
     /// A decoder for decoding Matroska and WEBM audio files.
@@ -41,10 +42,13 @@ namespace Thermite.Core.Decoders.Matroska
             {
                 FlushResult flushResult = default;
                 ReadResult readResult = default;
-                while (!flushResult.IsCompleted && !readResult.IsCompleted)
+                while (!flushResult.IsCompleted)
                 {
-                    readResult = await _input.ReadAsync();
+                    readResult = await _input.ReadAsync(cancellationToken);
                     var buffer = readResult.Buffer;
+
+                    if (buffer.IsEmpty && readResult.IsCompleted)
+                        return;
 
                     while (TryHandleElement(ref buffer, out var status))
                     {
@@ -128,17 +132,27 @@ namespace Thermite.Core.Decoders.Matroska
         }
 
         /// <inheritdoc/>
-        public ValueTask<string?> IdentifyCodecAsync(
+        public ValueTask<IAudioCodec?> IdentifyCodecAsync(
             CancellationToken cancellationToken = default)
         {
-            return new ValueTask<string?>(_bestAudioTrack.CodecId switch
+            return new ValueTask<IAudioCodec?>(_bestAudioTrack.CodecId switch
             {
                 MatroskaCodec.Opus =>
-                    $"{KnownAudioCodecs.Opus}/" +
-                    $"{(int)_bestAudioTrack.SampleRate}/" +
-                    $"{_bestAudioTrack.ChannelCount}",
+                    new OpusAudioCodec((int)_bestAudioTrack.SampleRate,
+                        (int)_bestAudioTrack.ChannelCount,
+                        (int)_bestAudioTrack.BitDepth),
+                MatroskaCodec.MpegLayer1 => CreateMpegDecoder(),
+                MatroskaCodec.MpegLayer2 => CreateMpegDecoder(),
+                MatroskaCodec.MpegLayer3 => CreateMpegDecoder(),
                 _ => null,
             });
+
+            static IAudioCodec? CreateMpegDecoder()
+            {
+                Debug.Assert(false,
+                    "MPEG parameters are not passed through yet");
+                return null;
+            }
         }
 
         private bool TryHandleElement(ref ReadOnlySequence<byte> buffer,

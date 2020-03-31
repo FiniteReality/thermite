@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace Thermite.Core.Decoders.Matroska
+namespace Thermite.Decoders.Matroska
 {
     internal struct MatroskaState
     {
@@ -36,6 +36,9 @@ namespace Thermite.Core.Decoders.Matroska
     internal enum MatroskaCodec
     {
         Opus,
-        Vorbis
+        Vorbis,
+        MpegLayer1,
+        MpegLayer2,
+        MpegLayer3,
     }
 }

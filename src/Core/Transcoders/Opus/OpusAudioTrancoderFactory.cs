@@ -1,9 +1,12 @@
 using System;
 using System.Globalization;
 using System.IO.Pipelines;
-using Thermite.Core.Transcoders.Opus;
+using Thermite.Codecs;
+using Thermite.Transcoders.Opus;
 
-namespace Thermite.Core.Transcoders
+using static Thermite.Utilities.ThrowHelpers;
+
+namespace Thermite.Transcoders
 {
     /// <summary>
     /// A transcoder factory used for creating Opus transcoders and resamplers.
@@ -11,54 +14,23 @@ namespace Thermite.Core.Transcoders
     public sealed class OpusAudioTranscoderFactory : IAudioTranscoderFactory
     {
         /// <inheritdoc/>
-        public IAudioTranscoder GetTranscoder(string codecType,
+        public IAudioTranscoder GetTranscoder(IAudioCodec codec,
             PipeReader input)
         {
-            if (TryGetResamplingOptions(codecType, out var sampleRate,
-                out var channelCount))
-            {
-                throw new NotImplementedException();
-            }
+            if (codec is OpusAudioCodec opusCodec)
+                return new OpusAudioPassthroughTranscoder(input);
 
-            return new OpusAudioPassthroughTranscoder(input);
+            ThrowArgumentException(nameof(codec),
+                $"Invalid codec passed to " +
+                $"{nameof(PcmAudioTranscoderFactory)}");
 
-            static bool TryGetResamplingOptions(string codecType,
-                out int sampleRate, out int channelCount)
-            {
-                // Min length of resampling options w/o codec name
-                const int MinLength = 4;
-                sampleRate = default;
-                channelCount = default;
-
-                if (codecType.Length <
-                    KnownAudioCodecs.Opus.Length + MinLength)
-                    return false;
-
-                var span = codecType.AsSpan().Slice(
-                    KnownAudioCodecs.Opus.Length + 1);
-                var split = span.IndexOf('/');
-
-                if (split < 0)
-                    return false;
-
-                if (!int.TryParse(span.Slice(0, split), NumberStyles.Integer,
-                    CultureInfo.InvariantCulture.NumberFormat,
-                    out sampleRate))
-                    return false;
-
-                if (!int.TryParse(span.Slice(split), NumberStyles.Integer,
-                    CultureInfo.InvariantCulture.NumberFormat,
-                    out channelCount))
-                    return false;
-
-                return true;
-            }
+            return default;
         }
 
         /// <inheritdoc/>
-        public bool IsSupported(string codecType)
+        public bool IsSupported(IAudioCodec codec)
         {
-            return codecType.StartsWith(KnownAudioCodecs.Opus);
+            return false;
         }
     }
 }
