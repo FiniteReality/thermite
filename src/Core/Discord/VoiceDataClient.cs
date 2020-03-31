@@ -108,14 +108,14 @@ namespace Thermite.Discord
                 buffer = readResult.Buffer;
             }
 
-            if (!TryReadPacket(ref buffer, out var packet))
+            if (!TryReadFrame(ref buffer, out var frame))
                 return;
 
-            var length = PacketHeadersSize + (int)packet.Length;
+            var length = PacketHeadersSize + (int)frame.Length;
             var pooledPacketBuffer = ArrayPool<byte>.Shared.Rent(length);
             var packetBuffer = pooledPacketBuffer.AsSpan().Slice(0, length);
 
-            if (!TryEncodePacket(packet, packetBuffer, encryptionKey, sequence,
+            if (!TryEncodePacket(frame, packetBuffer, encryptionKey, sequence,
                 timestamp, ssrc, out var frameSize))
                 return;
 
@@ -147,11 +147,11 @@ namespace Thermite.Discord
                 SocketFlags.None, endpoint);
             ArrayPool<byte>.Shared.Return(pooledPacketBuffer);
 
-            static bool TryReadPacket(
+            static bool TryReadFrame(
                 ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> packet)
+                out ReadOnlySequence<byte> frame)
             {
-                packet = default;
+                frame = default;
                 var reader = new SequenceReader<byte>(sequence);
 
                 if (!reader.TryReadLittleEndian(out short packetLength))
@@ -160,9 +160,10 @@ namespace Thermite.Discord
                 if (sequence.Length < packetLength)
                     return false;
 
-                packet = sequence.Slice(reader.Position, packetLength);
-                sequence = packet.Slice(reader.Position)
-                    .Slice(packetLength);
+                frame = sequence.Slice(reader.Position, packetLength);
+                var nextPacket = sequence.GetPosition(packetLength,
+                    reader.Position);
+                sequence = sequence.Slice(nextPacket);
                 return true;
             }
 

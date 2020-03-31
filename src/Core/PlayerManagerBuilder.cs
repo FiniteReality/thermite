@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using static Thermite.Utilities.ThrowHelpers;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// A builder for creating instances of <see cref="PlayerManager"/>.

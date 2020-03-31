@@ -1,11 +1,10 @@
 using System;
-using System.IO;
 using System.IO.Pipelines;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Thermite.Core.Providers.Http
+namespace Thermite.Providers.Http
 {
     /// <summary>
     /// A provider for retrieving audio files from HTTP(S) locations.

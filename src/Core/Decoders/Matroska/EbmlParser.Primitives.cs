@@ -4,7 +4,7 @@ using System.Numerics;
 
 using static System.Buffers.Binary.BinaryPrimitives;
 
-namespace Thermite.Core.Decoders.Matroska
+namespace Thermite.Decoders.Matroska
 {
     internal static partial class EbmlParser
     {

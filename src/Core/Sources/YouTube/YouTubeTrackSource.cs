@@ -7,12 +7,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Thermite.Core.Sources.YouTube;
+using Thermite.Sources.YouTube;
 using Thermite.Internal;
 
 using static Thermite.Utilities.ThrowHelpers;
 
-namespace Thermite.Core.Sources
+namespace Thermite.Sources
 {
     /// <summary>
     /// A source for retrieving Youtube tracks from the internet

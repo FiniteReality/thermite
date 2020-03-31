@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -8,7 +6,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Thermite.Core;
 using Thermite.Discord;
 using Thermite.Utilities;
 
@@ -250,6 +247,10 @@ namespace Thermite.Internal
             if (!_manager.TryGetDecoderFactory(mediaType,
                 out var decoderFactory))
             {
+                _logger.LogWarning(
+                    "Could not retrieve decoder for track {url}. Skipping.",
+                    info.OriginalLocation);
+
                 sessionCancelToken.Cancel();
                 await providerTask;
                 return;
@@ -259,26 +260,34 @@ namespace Thermite.Internal
                 provider.Output);
 
             var decoderTask = decoder.RunAsync(linkedCancelToken.Token);
-            var codecType = info.CodecTypeOverride ??
+            var codec = info.CodecOverride ??
                 await decoder.IdentifyCodecAsync(linkedCancelToken.Token);
 
-            if (codecType == null)
+            if (codec == null)
             {
+                _logger.LogWarning(
+                    "Could not identify codec for track {url}. Skipping.",
+                    info.OriginalLocation);
+
                 sessionCancelToken.Cancel();
                 await Task.WhenAll(providerTask, decoderTask);
                 return;
             }
 
-            if (!_manager.TryGetTranscoderFactory(codecType,
+            if (!_manager.TryGetTranscoderFactory(codec,
                 out var transcoderFactory))
             {
+                _logger.LogWarning(
+                    "Could not retrieve transcoder for track {url}. Skipping.",
+                    info.OriginalLocation);
+
                 sessionCancelToken.Cancel();
                 await Task.WhenAll(providerTask, decoderTask);
                 return;
             }
 
             await using var transcoder = transcoderFactory.GetTranscoder(
-                codecType, decoder.Output);
+                codec, decoder.Output);
 
             try
             {

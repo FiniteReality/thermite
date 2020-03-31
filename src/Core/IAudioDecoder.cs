@@ -3,7 +3,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// An interface used to retrieve audio frames from container files.
@@ -41,7 +41,7 @@ namespace Thermite.Core
         /// A <see cref="ValueTask{TResult}"/> representing the asynchronous
         /// completion of identifying the audio codec.
         /// </returns>
-        ValueTask<string?> IdentifyCodecAsync(
+        ValueTask<IAudioCodec?> IdentifyCodecAsync(
             CancellationToken cancellationToken = default);
     }
 }

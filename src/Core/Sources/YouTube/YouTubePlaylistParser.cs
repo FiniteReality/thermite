@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 
-namespace Thermite.Core.Sources.YouTube
+namespace Thermite.Sources.YouTube
 {
     internal static class YouTubePlaylistParser
     {
@@ -73,6 +73,7 @@ namespace Thermite.Core.Sources.YouTube
                 }
             }
 
+            alert = "Invalid data";
             return false;
         }
 

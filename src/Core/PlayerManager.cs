@@ -15,7 +15,7 @@ using Thermite.Utilities;
 using static Thermite.Utilities.State;
 using static Thermite.Utilities.ThrowHelpers;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// Manages instances of <see cref="IPlayer" />.
@@ -288,12 +288,12 @@ namespace Thermite.Core
             return false;
         }
 
-        internal bool TryGetTranscoderFactory(string codecType,
+        internal bool TryGetTranscoderFactory(IAudioCodec codec,
             [NotNullWhen(true)]out IAudioTranscoderFactory? factory)
         {
             foreach (var transcoderFactory in Transcoders)
             {
-                if (transcoderFactory.IsSupported(codecType))
+                if (transcoderFactory.IsSupported(codec))
                 {
                     factory = transcoderFactory;
                     return true;

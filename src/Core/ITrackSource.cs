@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// Represents a source for locating audio tracks on the internet.

@@ -1,6 +1,7 @@
 using System.IO.Pipelines;
+using Thermite.Decoders.Matroska;
 
-namespace Thermite.Core.Decoders
+namespace Thermite.Decoders
 {
     /// <summary>
     /// A decoder factory for decoding Matroska and WEBM files to their

@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// Represents a player for a specific guild.

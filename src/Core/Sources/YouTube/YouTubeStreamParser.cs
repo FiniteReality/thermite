@@ -7,7 +7,7 @@ using System.Text.Json;
 
 using static Thermite.Internal.ParsingUtilities;
 
-namespace Thermite.Core.Sources.YouTube
+namespace Thermite.Sources.YouTube
 {
     internal static class YoutubeStreamParser
     {
@@ -105,10 +105,10 @@ namespace Thermite.Core.Sources.YouTube
             track.AudioLocation = new Uri(location!);
             track.MediaTypeOverride = mediaType;
             if (mediaType != null)
-                track.CodecTypeOverride = GetCodec(mediaType);
+                track.CodecOverride = GetCodec(mediaType);
             return true;
 
-            static string? GetCodec(string mediaType)
+            static IAudioCodec? GetCodec(string mediaType)
             {
                 const string codecsString = "codecs=\"";
                 var codecsIndex = mediaType.IndexOf(codecsString);
@@ -117,7 +117,8 @@ namespace Thermite.Core.Sources.YouTube
                     return default;
 
                 var start = codecsIndex + codecsString.Length;
-                return mediaType[start..^1];
+                //return mediaType[start..^1];
+                return null;
             }
 
             static bool TryGetString(ReadOnlySpan<byte> input,

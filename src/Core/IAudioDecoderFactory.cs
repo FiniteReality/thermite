@@ -1,7 +1,7 @@
 using System;
 using System.IO.Pipelines;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// A factory which can be used to create instances of

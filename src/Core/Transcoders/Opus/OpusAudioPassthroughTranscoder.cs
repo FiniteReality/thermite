@@ -2,7 +2,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Thermite.Core.Transcoders.Opus
+namespace Thermite.Transcoders.Opus
 {
     /// <summary>
     /// A transcoder which performs no operation on the audio data as it passes

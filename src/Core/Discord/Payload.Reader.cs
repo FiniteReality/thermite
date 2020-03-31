@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.Text.Json;
-using Thermite.Core;
 using Thermite.Discord.Models;
 
 namespace Thermite.Discord

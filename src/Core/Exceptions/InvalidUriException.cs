@@ -1,6 +1,6 @@
 using System;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// An exception thrown when a given <see cref="Uri"/> is not valid.

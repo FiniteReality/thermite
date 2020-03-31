@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
-namespace Thermite.Core
+namespace Thermite
 {
     internal static class JsonElementExtensions
     {
@@ -31,7 +31,8 @@ namespace Thermite.Core
             if (elementValue.ValueKind != JsonValueKind.String)
                 return false;
 
-            value = elementValue.GetString();
+            // Due to above check we can guarantee this won't return null.
+            value = elementValue.GetString()!;
             return true;
         }
     }

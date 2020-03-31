@@ -9,7 +9,7 @@ using Thermite.Natives;
 using static Thermite.Natives.Opus;
 using static Thermite.Utilities.ThrowHelpers;
 
-namespace Thermite.Core.Transcoders.Opus
+namespace Thermite.Transcoders.Opus
 {
     /// <summary>
     /// A transcoder which resamples Opus packets to be Discord-compatible.

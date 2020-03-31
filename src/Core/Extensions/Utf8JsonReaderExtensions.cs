@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Thermite.Core
+namespace Thermite
 {
     internal static class Utf8JsonReaderExtensions
     {

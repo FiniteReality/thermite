@@ -1,6 +1,6 @@
 using System.IO.Pipelines;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// A factory which can be used to create instances of
@@ -12,20 +12,20 @@ namespace Thermite.Core
         /// Checks whether the given media type is supported by this
         /// transcoder.
         /// </summary>
-        /// <param name="codecType">
-        /// The codec type to test.
+        /// <param name="codec">
+        /// The codec type to test for support.
         /// </param>
         /// <returns>
-        /// <code>true</code> if <paramref name="codecType"/> is supported by
+        /// <code>true</code> if <paramref name="codec"/> is supported by
         /// this transcoder, <code>false</code> otherwise.
         /// </returns>
-        bool IsSupported(string codecType);
+        bool IsSupported(IAudioCodec codec);
 
         /// <summary>
         /// Gets a transcoder for the given <see cref="PipeReader"/>.
         /// </summary>
-        /// <param name="codecType">
-        /// The identified codec type, which may contain information useful for
+        /// <param name="codec">
+        /// The identified codec, which may contain information useful for
         /// transcoding audio data.
         /// </param>
         /// <param name="input">
@@ -35,6 +35,6 @@ namespace Thermite.Core
         /// A <see cref="IAudioTranscoder"/> containing the state of the
         /// transcoder.
         /// </returns>
-        IAudioTranscoder GetTranscoder(string codecType, PipeReader input);
+        IAudioTranscoder GetTranscoder(IAudioCodec codec, PipeReader input);
     }
 }

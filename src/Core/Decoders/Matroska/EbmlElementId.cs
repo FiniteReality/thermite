@@ -1,4 +1,4 @@
-namespace Thermite.Core.Decoders.Matroska
+namespace Thermite.Decoders.Matroska
 {
     internal enum EbmlElementId : uint
     {

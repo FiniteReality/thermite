@@ -3,7 +3,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Thermite.Core
+namespace Thermite
 {
     /// <summary>
     /// An interface used to transcode audio data into Thermite-compatible
