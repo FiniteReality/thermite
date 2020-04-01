@@ -4,6 +4,7 @@ using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Thermite.Codecs;
 using Thermite.Natives;
 
 using static Thermite.Natives.Opus;
@@ -12,9 +13,9 @@ using static Thermite.Utilities.ThrowHelpers;
 namespace Thermite.Transcoders.Opus
 {
     /// <summary>
-    /// A transcoder which resamples Opus packets to be Discord-compatible.
+    /// A transcoder which decodes Opus audio packets into PCM samples.
     /// </summary>
-    public sealed class OpusAudioResamplingTranscoder : IAudioTranscoder
+    public sealed class OpusAudioDecodingTranscoder : IAudioTranscoder
     {
         private readonly PipeReader _input;
         private readonly Pipe _pipe;
@@ -23,55 +24,36 @@ namespace Thermite.Transcoders.Opus
         private readonly int _channelCount;
 
         private unsafe OpusDecoder* _decoder;
-        private unsafe OpusEncoder* _encoder;
 
         /// <inheritdoc/>
         public PipeReader Output => _pipe.Reader;
 
-        internal unsafe OpusAudioResamplingTranscoder(PipeReader input,
-            int sampleRate, int channelCount)
+        internal unsafe OpusAudioDecodingTranscoder(PipeReader input,
+            OpusAudioCodec inputCodec)
         {
-            ThrowNotImplemented();
-
-            const int DesiredSampleRate = 48000;
-            const int Application = 2049; // OPUS_APPLICATION_AUDIO
-
-            _sampleRate = sampleRate;
-            _channelCount = channelCount;
+            _sampleRate = inputCodec.SamplingRate;
+            _channelCount = inputCodec.ChannelCount;
 
             int status;
-            _decoder = opus_decoder_create(sampleRate, channelCount, &status);
+            _decoder = opus_decoder_create(_sampleRate, _channelCount, &status);
 
             if (status < 0)
                 ThrowExternalException("Could not create Opus Decoder",
                     status);
 
-            _encoder = opus_encoder_create(DesiredSampleRate, channelCount,
-                Application, &status);
-
-            if (status < 0)
-                ThrowExternalException("Could not create Opus Encoder",
-                    status);
-
             _input = input;
             _pipe = new Pipe();
-
-            static void ThrowNotImplemented()
-            {
-                throw new NotImplementedException();
-            }
         }
 
         /// <summary>
         /// Finalizes an instance of
-        /// <see cref="OpusAudioResamplingTranscoder"/>.
+        /// <see cref="OpusAudioDecodingTranscoder"/>.
         /// </summary>
-        ~OpusAudioResamplingTranscoder()
+        ~OpusAudioDecodingTranscoder()
         {
             _ = DisposeAsync();
             GC.SuppressFinalize(this);
         }
-
 
         /// <inheritdoc/>
         public async Task RunAsync(
@@ -88,7 +70,7 @@ namespace Thermite.Transcoders.Opus
                     readResult = await _input.ReadAsync(cancellationToken);
                     var sequence = readResult.Buffer;
 
-                    while (TryReadPacket(ref sequence, out var packet))
+                    while (TryReadFrame(ref sequence, out var packet))
                     {
                         if (packet.IsEmpty)
                             continue;
@@ -107,11 +89,11 @@ namespace Thermite.Transcoders.Opus
                 await _input.CompleteAsync();
             }
 
-            static bool TryReadPacket(
+            static bool TryReadFrame(
                 ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> packet)
+                out ReadOnlySequence<byte> frame)
             {
-                packet = default;
+                frame = default;
                 var reader = new SequenceReader<byte>(sequence);
 
                 if (!reader.TryReadLittleEndian(out short packetLength))
@@ -120,13 +102,21 @@ namespace Thermite.Transcoders.Opus
                 if (sequence.Length < packetLength)
                     return false;
 
-                packet = sequence.Slice(reader.Position, packetLength);
-                sequence = packet.Slice(reader.Position)
-                    .Slice(packetLength);
+                frame = sequence.Slice(reader.Position, packetLength);
+                var nextPacket = sequence.GetPosition(packetLength,
+                    reader.Position);
+                sequence = sequence.Slice(nextPacket);
                 return true;
             }
         }
 
+        /// <inheritdoc/>
+        public ValueTask<IAudioCodec> GetOutputCodecAsync(
+            CancellationToken cancellationToken = default)
+            => new ValueTask<IAudioCodec>(
+                new PcmAudioCodec(16, _channelCount,
+                    SampleEndianness.LittleEndian, SampleFormat.SignedInteger,
+                    _sampleRate));
         private unsafe bool TryTranscodePacket(ReadOnlySequence<byte> packet,
             PipeWriter writer)
         {
@@ -180,11 +170,8 @@ namespace Thermite.Transcoders.Opus
         {
             if (_decoder != null)
                 opus_decoder_destroy(_decoder);
-            if (_encoder != null)
-                opus_encoder_destroy(_encoder);
 
             _decoder = null;
-            _encoder = null;
             return default;
         }
     }

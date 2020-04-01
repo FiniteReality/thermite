@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipelines;
 using Thermite.Codecs;
@@ -17,20 +18,38 @@ namespace Thermite.Transcoders
         public IAudioTranscoder GetTranscoder(IAudioCodec codec,
             PipeReader input)
         {
-            if (codec is OpusAudioCodec opusCodec)
-                return new OpusAudioPassthroughTranscoder(input);
+            if (!(codec is OpusAudioCodec opusCodec))
+            {
+                ThrowArgumentException(nameof(codec),
+                    $"Invalid codec passed to " +
+                    $"{nameof(PcmAudioTranscoderFactory)}");
 
-            ThrowArgumentException(nameof(codec),
-                $"Invalid codec passed to " +
-                $"{nameof(PcmAudioTranscoderFactory)}");
+                return default;
+            }
 
-            return default;
+            return opusCodec switch
+            {
+                { ChannelCount: 2, SamplingRate: 48000 }
+                    => new OpusAudioPassthroughTranscoder(input),
+
+                { ChannelCount: _, SamplingRate: _}
+                    => new OpusAudioDecodingTranscoder(input, opusCodec),
+
+                _ => InvalidCodec()
+            };
+
+            static IAudioTranscoder InvalidCodec()
+            {
+                Debug.Assert(false, "Invalid codec properties");
+
+                return null;
+            }
         }
 
         /// <inheritdoc/>
         public bool IsSupported(IAudioCodec codec)
         {
-            return false;
+            return codec is OpusAudioCodec;
         }
     }
 }
