@@ -22,7 +22,7 @@ namespace Thermite.Transcoders
             {
                 ThrowArgumentException(nameof(codec),
                     $"Invalid codec passed to " +
-                    $"{nameof(PcmAudioTranscoderFactory)}");
+                    $"{nameof(OpusAudioTranscoderFactory)}");
 
                 return default;
             }
