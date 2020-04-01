@@ -30,5 +30,20 @@ namespace Thermite
         /// <see cref="Output"/>.
         /// </returns>
         Task RunAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Asynchronously identifies the output codec of audio data returned
+        /// by this transcoder.
+        /// </summary>
+        /// <param name="cancellationToken">
+        /// The token to monitor for cancellation requests. The default value
+        /// is <see cref="CancellationToken.None"/>
+        /// </param>
+        /// <returns>
+        /// A <see cref="ValueTask{TResult}"/> representing the asynchronous
+        /// completion of identifying the audio codec.
+        /// </returns>
+        ValueTask<IAudioCodec> GetOutputCodecAsync(
+            CancellationToken cancellationToken = default);
     }
 }

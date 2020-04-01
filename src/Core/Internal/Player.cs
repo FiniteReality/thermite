@@ -274,11 +274,15 @@ namespace Thermite.Internal
                 return;
             }
 
-            if (!_manager.TryGetTranscoderFactory(codec,
-                out var transcoderFactory))
+            var pipeline = await TranscoderPipeline
+                .CreatePipelineAsync(_manager, decoder.Output, codec,
+                    linkedCancelToken.Token);
+
+            if (pipeline == null)
             {
                 _logger.LogWarning(
-                    "Could not retrieve transcoder for track {url}. Skipping.",
+                    "Could not build transcoder pipeline for track {url}. " +
+                    "Skipping.",
                     info.OriginalLocation);
 
                 sessionCancelToken.Cancel();
@@ -286,14 +290,11 @@ namespace Thermite.Internal
                 return;
             }
 
-            await using var transcoder = transcoderFactory.GetTranscoder(
-                codec, decoder.Output);
-
             try
             {
                 await Task.WhenAll(
-                    transcoder.RunAsync(linkedCancelToken.Token),
-                    transcoder.Output.CopyToAsync(Writer,
+                    pipeline.RunAsync(linkedCancelToken.Token),
+                    pipeline.Output.CopyToAsync(Writer,
                         linkedCancelToken.Token),
                     decoderTask,
                     providerTask);
