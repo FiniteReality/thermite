@@ -1,5 +1,7 @@
 using System;
 using System.Buffers;
+using System.Buffers.Binary;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -15,27 +17,27 @@ namespace Thermite.Transcoders.Opus
     /// <summary>
     /// A transcoder which decodes Opus audio packets into PCM samples.
     /// </summary>
-    public sealed class OpusAudioDecodingTranscoder : IAudioTranscoder
+    public sealed class OpusDecodingTranscoder : IAudioTranscoder
     {
+        private const int OutputBufferSize = 1 << 12; // 4k
+
+        private readonly OpusAudioCodec _codec;
         private readonly PipeReader _input;
         private readonly Pipe _pipe;
-
-        private readonly int _sampleRate;
-        private readonly int _channelCount;
 
         private unsafe OpusDecoder* _decoder;
 
         /// <inheritdoc/>
         public PipeReader Output => _pipe.Reader;
 
-        internal unsafe OpusAudioDecodingTranscoder(PipeReader input,
-            OpusAudioCodec inputCodec)
+        internal unsafe OpusDecodingTranscoder(PipeReader input,
+            OpusAudioCodec codec)
         {
-            _sampleRate = inputCodec.SamplingRate;
-            _channelCount = inputCodec.ChannelCount;
+            _codec = codec;
 
             int status;
-            _decoder = opus_decoder_create(_sampleRate, _channelCount, &status);
+            _decoder = opus_decoder_create(codec.SamplingRate,
+                codec.ChannelCount, &status);
 
             if (status < 0)
                 ThrowExternalException("Could not create Opus Decoder",
@@ -47,9 +49,9 @@ namespace Thermite.Transcoders.Opus
 
         /// <summary>
         /// Finalizes an instance of
-        /// <see cref="OpusAudioDecodingTranscoder"/>.
+        /// <see cref="OpusDecodingTranscoder"/>.
         /// </summary>
-        ~OpusAudioDecodingTranscoder()
+        ~OpusDecodingTranscoder()
         {
             _ = DisposeAsync();
             GC.SuppressFinalize(this);
@@ -75,8 +77,11 @@ namespace Thermite.Transcoders.Opus
                         if (frame.IsEmpty)
                             continue;
 
-                        if (!TryTranscodePacket(frame, writer))
-                            break;
+                        var encoded = TryDecodeFrame(frame, writer);
+                        Debug.Assert(encoded > 0, "Opus decode error");
+
+                        if (encoded > 0)
+                            writer.Advance(encoded);
                     }
 
                     _input.AdvanceTo(sequence.Start, sequence.End);
@@ -96,14 +101,14 @@ namespace Thermite.Transcoders.Opus
                 frame = default;
                 var reader = new SequenceReader<byte>(sequence);
 
-                if (!reader.TryReadLittleEndian(out short packetLength))
+                if (!reader.TryReadLittleEndian(out short frameLength))
                     return false;
 
-                if (sequence.Length < packetLength)
+                if (sequence.Length < frameLength)
                     return false;
 
-                frame = sequence.Slice(reader.Position, packetLength);
-                var nextFrame = sequence.GetPosition(packetLength,
+                frame = sequence.Slice(reader.Position, frameLength);
+                var nextFrame = sequence.GetPosition(frameLength,
                     reader.Position);
                 sequence = sequence.Slice(nextFrame);
                 return true;
@@ -114,54 +119,50 @@ namespace Thermite.Transcoders.Opus
         public ValueTask<IAudioCodec> GetOutputCodecAsync(
             CancellationToken cancellationToken = default)
             => new ValueTask<IAudioCodec>(
-                new PcmAudioCodec(16, _channelCount,
-                    SampleEndianness.LittleEndian, SampleFormat.SignedInteger,
-                    _sampleRate));
-        private unsafe bool TryTranscodePacket(ReadOnlySequence<byte> packet,
+                new PcmAudioCodec(
+                    bitDepth: sizeof(short) * 8,
+                    _codec.ChannelCount,
+                    SampleEndianness.LittleEndian,
+                    SampleFormat.SignedInteger,
+                    _codec.SamplingRate));
+
+        private unsafe int TryDecodeFrame(ReadOnlySequence<byte> frame,
             PipeWriter writer)
         {
-            var sampleData = GetSampleData(packet, _decoder, _sampleRate,
-                _channelCount);
+            if (frame.IsSingleSegment)
+                return WriteInternal(_decoder, _codec.ChannelCount,
+                    frame.FirstSpan, writer);
 
-            // TODO: resample and re-encode data
+            var buffer = ArrayPool<byte>.Shared.Rent((int)frame.Length);
+            frame.CopyTo(buffer);
 
-            return false;
+            var status = WriteInternal(_decoder, _codec.ChannelCount,
+                buffer.AsSpan().Slice(0, (int)frame.Length),
+                writer);
 
-            static unsafe float[]? GetSampleData(ReadOnlySequence<byte> packet,
-                OpusDecoder* st, int sampleRate, int channelCount)
+            ArrayPool<byte>.Shared.Return(buffer);
+
+            return status;
+
+            static unsafe int WriteInternal(OpusDecoder* decoder,
+                int channelCount, ReadOnlySpan<byte> frame, PipeWriter writer)
             {
-                int frameSize;
-                ReadOnlySpan<byte> opusPacket = packet.FirstSpan;
+                var block = writer.GetSpan(OutputBufferSize);
+                int blockSize = block.Length / sizeof(short) / channelCount;
 
-                if (!packet.IsSingleSegment)
-                {
-                    Span<byte> tmp = stackalloc byte[(int)packet.Length];
-                    packet.CopyTo(tmp);
+                int encoded;
+                fixed (byte* opusData = frame)
+                fixed (short* outputBlock = MemoryMarshal
+                    .Cast<byte, short>(block))
+                    encoded = opus_decode(decoder, opusData, frame.Length,
+                        outputBlock + 1, blockSize, 1);
 
-                    opusPacket = MemoryMarshal.CreateReadOnlySpan(
-                        ref MemoryMarshal.GetReference(tmp), tmp.Length);
-                }
+                if (encoded > 0 &&
+                    !BinaryPrimitives.TryWriteInt16LittleEndian(block,
+                        (short)encoded))
+                    return -1;
 
-                fixed (byte* data = opusPacket)
-                    frameSize = opus_packet_get_samples_per_frame(data,
-                        sampleRate);
-
-                var block = ArrayPool<float>.Shared.Rent(
-                    frameSize * channelCount);
-
-                var decoded = 0;
-                fixed (byte* input = opusPacket)
-                fixed (float* output = block)
-                    decoded = opus_decode_float(st, input, opusPacket.Length,
-                        output, frameSize, 0);
-
-                if (decoded < 0)
-                {
-                    ArrayPool<float>.Shared.Return(block);
-                    return null;
-                }
-
-                return block;
+                return encoded;
             }
         }
 

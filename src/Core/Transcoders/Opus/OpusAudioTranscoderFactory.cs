@@ -30,10 +30,10 @@ namespace Thermite.Transcoders
             return opusCodec switch
             {
                 { ChannelCount: 2, SamplingRate: 48000 }
-                    => new OpusAudioPassthroughTranscoder(input),
+                    => new OpusPassthroughTranscoder(input),
 
                 { ChannelCount: _, SamplingRate: _}
-                    => new OpusAudioDecodingTranscoder(input, opusCodec),
+                    => new OpusDecodingTranscoder(input, opusCodec),
 
                 _ => InvalidCodec()
             };
