@@ -49,7 +49,7 @@ namespace Thermite.Transcoders
                     => new PcmResamplingTranscoder(input, pcmCodec),
 
                 { ChannelCount: 1 }
-                    => new PcmStereoTranscoder(input, pcmCodec),
+                    => new PcmChannelDuplicationTranscoder(input, pcmCodec),
                 { ChannelCount : _ }
                     => new PcmDownmixingTranscoder(input, pcmCodec),
 

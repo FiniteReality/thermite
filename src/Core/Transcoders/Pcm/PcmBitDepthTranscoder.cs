@@ -14,7 +14,7 @@ namespace Thermite.Transcoders.Pcm
     /// A transcoder which encodes PCM sample data to Opus as it passes
     /// through.
     /// </summary>
-    public sealed class PcmEndiannessTranscoder : IAudioTranscoder
+    public sealed class PcmBitDepthTranscoder : IAudioTranscoder
     {
         private readonly PipeReader _input;
         private readonly PcmAudioCodec _codec;
@@ -23,7 +23,7 @@ namespace Thermite.Transcoders.Pcm
         /// <inheritdoc/>
         public PipeReader Output => _pipe.Reader;
 
-        internal PcmEndiannessTranscoder(PipeReader input,
+        internal PcmBitDepthTranscoder(PipeReader input,
             PcmAudioCodec codec)
         {
             _input = input;
@@ -90,9 +90,9 @@ namespace Thermite.Transcoders.Pcm
             CancellationToken cancellationToken = default)
             => new ValueTask<IAudioCodec>(
                 new PcmAudioCodec(
-                    _codec.BitDepth,
+                    bitDepth: sizeof(short) * 8,
                     _codec.ChannelCount,
-                    SampleEndianness.LittleEndian,
+                    _codec.Endianness,
                     _codec.Format,
                     _codec.SamplingRate));
 
