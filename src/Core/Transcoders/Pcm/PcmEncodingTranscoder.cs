@@ -17,7 +17,7 @@ namespace Thermite.Transcoders.Pcm
     /// A transcoder which encodes PCM sample data to Opus as it passes
     /// through.
     /// </summary>
-    public sealed class PcmAudioTranscoder : IAudioTranscoder
+    public sealed class PcmEncodingTranscoder : IAudioTranscoder
     {
         private readonly PipeReader _input;
         private readonly Pipe _pipe;
@@ -29,7 +29,7 @@ namespace Thermite.Transcoders.Pcm
         /// <inheritdoc/>
         public PipeReader Output => _pipe.Reader;
 
-        internal unsafe PcmAudioTranscoder(PipeReader input,
+        internal unsafe PcmEncodingTranscoder(PipeReader input,
             PcmAudioCodec properties)
         {
             const int DesiredSampleRate = 48000;
@@ -39,13 +39,13 @@ namespace Thermite.Transcoders.Pcm
             if (properties.SamplingRate != DesiredSampleRate)
                 ThrowArgumentOutOfRangeException(nameof(properties),
                     properties,
-                    $"{nameof(PcmAudioTranscoder)} does not support streams " +
+                    $"{nameof(PcmEncodingTranscoder)} does not support streams " +
                     $"with sampling rates other than {DesiredSampleRate} Hz.");
 
             if (properties.BitDepth != DesiredBitDepth)
                 ThrowArgumentOutOfRangeException(nameof(properties),
                     properties,
-                    $"{nameof(PcmAudioTranscoder)} does not support streams " +
+                    $"{nameof(PcmEncodingTranscoder)} does not support streams " +
                     $"with bit depths other than {DesiredBitDepth}.");
 
             _channelCount = properties.ChannelCount;
@@ -63,9 +63,9 @@ namespace Thermite.Transcoders.Pcm
         }
 
         /// <summary>
-        /// Finalizes an instance of <see cref="PcmAudioTranscoder"/>.
+        /// Finalizes an instance of <see cref="PcmEncodingTranscoder"/>.
         /// </summary>
-        ~PcmAudioTranscoder()
+        ~PcmEncodingTranscoder()
         {
             // N.B. not awaited since implementation of DisposeAsync is
             // synchronous.
@@ -123,12 +123,18 @@ namespace Thermite.Transcoders.Pcm
                     return false;
 
                 frame = sequence.Slice(reader.Position, packetLength);
-                var nextPacket = sequence.GetPosition(packetLength,
+                var nextFrame = sequence.GetPosition(packetLength,
                     reader.Position);
-                sequence = sequence.Slice(nextPacket);
+                sequence = sequence.Slice(nextFrame);
                 return true;
             }
         }
+
+        /// <inheritdoc/>
+        public ValueTask<IAudioCodec> GetOutputCodecAsync(
+            CancellationToken cancellationToken = default)
+            => new ValueTask<IAudioCodec>(
+                OpusAudioCodec.DiscordCompatibleOpus);
 
         private unsafe int TryWritePacket(ReadOnlySequence<byte> packet,
             PipeWriter writer)
