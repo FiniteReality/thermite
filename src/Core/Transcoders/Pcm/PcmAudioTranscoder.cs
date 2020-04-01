@@ -88,12 +88,12 @@ namespace Thermite.Transcoders.Pcm
                     readResult = await _input.ReadAsync(cancellationToken);
                     var sequence = readResult.Buffer;
 
-                    while (TryReadPacket(ref sequence, out var packet))
+                    while (TryReadFrame(ref sequence, out var frame))
                     {
-                        if (packet.IsEmpty)
+                        if (frame.IsEmpty)
                             continue;
 
-                        var encoded = TryWritePacket(packet, writer);
+                        var encoded = TryWritePacket(frame, writer);
                         Debug.Assert(encoded > 0, "Opus packet encode error");
 
                         writer.Advance(encoded);
@@ -109,11 +109,11 @@ namespace Thermite.Transcoders.Pcm
                 await _input.CompleteAsync();
             }
 
-            static bool TryReadPacket(
+            static bool TryReadFrame(
                 ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> packet)
+                out ReadOnlySequence<byte> frame)
             {
-                packet = default;
+                frame = default;
                 var reader = new SequenceReader<byte>(sequence);
 
                 if (!reader.TryReadLittleEndian(out short packetLength))
@@ -122,9 +122,10 @@ namespace Thermite.Transcoders.Pcm
                 if (sequence.Length < packetLength)
                     return false;
 
-                packet = sequence.Slice(reader.Position, packetLength);
-                sequence = packet.Slice(reader.Position)
-                    .Slice(packetLength);
+                frame = sequence.Slice(reader.Position, packetLength);
+                var nextPacket = sequence.GetPosition(packetLength,
+                    reader.Position);
+                sequence = sequence.Slice(nextPacket);
                 return true;
             }
         }

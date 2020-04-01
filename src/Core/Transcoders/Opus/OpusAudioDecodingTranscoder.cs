@@ -70,12 +70,12 @@ namespace Thermite.Transcoders.Opus
                     readResult = await _input.ReadAsync(cancellationToken);
                     var sequence = readResult.Buffer;
 
-                    while (TryReadFrame(ref sequence, out var packet))
+                    while (TryReadFrame(ref sequence, out var frame))
                     {
-                        if (packet.IsEmpty)
+                        if (frame.IsEmpty)
                             continue;
 
-                        if (!TryTranscodePacket(packet, writer))
+                        if (!TryTranscodePacket(frame, writer))
                             break;
                     }
 
