@@ -161,9 +161,9 @@ namespace Thermite.Discord
                     return false;
 
                 frame = sequence.Slice(reader.Position, packetLength);
-                var nextPacket = sequence.GetPosition(packetLength,
+                var nextFrame = sequence.GetPosition(packetLength,
                     reader.Position);
-                sequence = sequence.Slice(nextPacket);
+                sequence = sequence.Slice(nextFrame);
                 return true;
             }
 
