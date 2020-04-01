@@ -24,17 +24,17 @@ namespace Thermite.Codecs
         /// <param name="format">
         /// The sample format of samples for the codec.
         /// </param>
-        /// <param name="sampleRate">
+        /// <param name="samplingRate">
         /// The sample rate, in hertz, to specify for the codec.
         /// </param>
         public PcmAudioCodec(int bitDepth, int channelCount,
-            SampleEndianness endianness, SampleFormat format, int sampleRate)
+            SampleEndianness endianness, SampleFormat format, int samplingRate)
         {
             BitDepth = bitDepth;
             ChannelCount = channelCount;
             Endianness = endianness;
             Format = format;
-            SamplingRate = sampleRate;
+            SamplingRate = samplingRate;
         }
 
         /// <inheritdoc/>

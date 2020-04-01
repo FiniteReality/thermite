@@ -10,7 +10,10 @@ namespace Thermite.Codecs
         /// which are compatible with Discord.
         /// </summary>
         public static OpusAudioCodec DiscordCompatibleOpus { get; }
-            = new OpusAudioCodec(48000, 2, 16);
+            = new OpusAudioCodec(
+                samplingRate: 48000,
+                channelCount: 2,
+                bitDepth: sizeof(short) * 8);
 
         /// <inheritdoc/>
         public string Name => "Opus";
@@ -19,7 +22,7 @@ namespace Thermite.Codecs
         /// Initializes a new instance of the <see cref="OpusAudioCodec"/>
         /// class.
         /// </summary>
-        /// <param name="sampleRate">
+        /// <param name="samplingRate">
         /// The sample rate, in hertz, to specify for the codec.
         /// </param>
         /// <param name="channelCount">
@@ -28,9 +31,9 @@ namespace Thermite.Codecs
         /// <param name="bitDepth">
         /// The bit depth to specify for the codec.
         /// </param>
-        public OpusAudioCodec(int sampleRate, int channelCount, int bitDepth)
+        public OpusAudioCodec(int samplingRate, int channelCount, int bitDepth)
         {
-            SamplingRate = sampleRate;
+            SamplingRate = samplingRate;
             ChannelCount = channelCount;
             BitDepth = bitDepth;
         }

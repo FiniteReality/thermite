@@ -15,7 +15,7 @@ namespace Thermite.Codecs
         /// <param name="layer">
         /// The layer used for the codec.
         /// </param>
-        /// <param name="sampleRate">
+        /// <param name="samplingRate">
         /// The sample rate, in hertz, to specify for the codec.
         /// </param>
         /// <param name="channelCount">
@@ -24,12 +24,12 @@ namespace Thermite.Codecs
         /// <param name="bitrate">
         /// The average bitrate, in kilobits per second, used by the codec.
         /// </param>
-        public MpegAudioCodec(int version, int layer, int sampleRate,
+        public MpegAudioCodec(int version, int layer, int samplingRate,
             int channelCount, int bitrate)
         {
             Version = version;
             Layer = layer;
-            SamplingRate = sampleRate;
+            SamplingRate = samplingRate;
             ChannelCount = channelCount;
             BitRate = bitrate;
 
