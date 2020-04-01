@@ -12,29 +12,48 @@ namespace Thermite.Codecs
         /// Initializes a new instance of the <see cref="PcmAudioCodec"/>
         /// class.
         /// </summary>
-        /// <param name="sampleRate">
-        /// The sample rate, in hertz, to specify for the codec.
+        /// <param name="bitDepth">
+        /// The bit depth to specify for the codec.
         /// </param>
         /// <param name="channelCount">
         /// The number of channels to specify for the codec.
         /// </param>
-        /// <param name="bitDepth">
-        /// The bit depth to specify for the codec.
+        /// <param name="endianness">
+        /// The sample endianness of samples for the codec.
         /// </param>
-        public PcmAudioCodec(int sampleRate, int channelCount, int bitDepth)
+        /// <param name="format">
+        /// The sample format of samples for the codec.
+        /// </param>
+        /// <param name="sampleRate">
+        /// The sample rate, in hertz, to specify for the codec.
+        /// </param>
+        public PcmAudioCodec(int bitDepth, int channelCount,
+            SampleEndianness endianness, SampleFormat format, int sampleRate)
         {
-            SamplingRate = sampleRate;
-            ChannelCount = channelCount;
             BitDepth = bitDepth;
+            ChannelCount = channelCount;
+            Endianness = endianness;
+            Format = format;
+            SamplingRate = sampleRate;
         }
 
         /// <inheritdoc/>
-        public int SamplingRate { get; }
+        public int BitDepth { get; }
 
         /// <inheritdoc/>
         public int ChannelCount { get; }
 
+        /// <summary>
+        /// The endianness of each sample in the audio stream.
+        /// </summary>
+        public SampleEndianness Endianness { get; }
+
+        /// <summary>
+        /// The format of each sample in the audio stream.
+        /// </summary>
+        public SampleFormat Format { get; }
+
         /// <inheritdoc/>
-        public int BitDepth { get; }
+        public int SamplingRate { get; }
     }
 }
