@@ -5,6 +5,13 @@ namespace Thermite.Codecs
     /// </summary>
     public class OpusAudioCodec : IAudioCodec
     {
+        /// <summary>
+        /// Gets a <see cref="OpusAudioCodec"/> representing codec properties
+        /// which are compatible with Discord.
+        /// </summary>
+        public static OpusAudioCodec DiscordCompatibleOpus { get; }
+            = new OpusAudioCodec(48000, 2, 16);
+
         /// <inheritdoc/>
         public string Name => "Opus";
 
