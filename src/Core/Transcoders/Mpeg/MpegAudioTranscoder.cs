@@ -15,8 +15,7 @@ using static Thermite.Natives.MiniMp3;
 namespace Thermite.Transcoders.Mpeg
 {
     /// <summary>
-    /// A transcoder which transcodes MPEG audio into Discord-Compatible Opus
-    /// packets.
+    /// A transcoder which transcodes MPEG audio into PCM samples.
     /// </summary>
     public sealed class MpegAudioTranscoder : IAudioTranscoder
     {
@@ -92,14 +91,14 @@ namespace Thermite.Transcoders.Mpeg
                 frame = default;
                 var reader = new SequenceReader<byte>(sequence);
 
-                if (!reader.TryReadLittleEndian(out short packetLength))
+                if (!reader.TryReadLittleEndian(out short frameLength))
                     return false;
 
-                if (sequence.Length < packetLength)
+                if (sequence.Length < frameLength)
                     return false;
 
-                frame = sequence.Slice(reader.Position, packetLength);
-                var nextFrame = sequence.GetPosition(packetLength,
+                frame = sequence.Slice(reader.Position, frameLength);
+                var nextFrame = sequence.GetPosition(frameLength,
                     reader.Position);
                 sequence = sequence.Slice(nextFrame);
                 return true;
@@ -135,6 +134,17 @@ namespace Thermite.Transcoders.Mpeg
                 return true;
             }
         }
+
+        /// <inheritdoc/>
+        public ValueTask<IAudioCodec> GetOutputCodecAsync(
+            CancellationToken cancellationToken = default)
+            => new ValueTask<IAudioCodec>(
+                new PcmAudioCodec(
+                    bitDepth: sizeof(short) * 8,
+                    _codec.ChannelCount,
+                    SampleEndianness.LittleEndian,
+                    SampleFormat.SignedInteger,
+                    _codec.SamplingRate));
 
         /// <inheritdoc/>
         public ValueTask DisposeAsync()

@@ -19,10 +19,9 @@ namespace Thermite.Transcoders.Pcm
     /// </summary>
     public sealed class PcmEncodingTranscoder : IAudioTranscoder
     {
+        private readonly PcmAudioCodec _codec;
         private readonly PipeReader _input;
         private readonly Pipe _pipe;
-
-        private readonly int _channelCount;
 
         private unsafe OpusEncoder* _encoder;
 
@@ -30,29 +29,20 @@ namespace Thermite.Transcoders.Pcm
         public PipeReader Output => _pipe.Reader;
 
         internal unsafe PcmEncodingTranscoder(PipeReader input,
-            PcmAudioCodec properties)
+            PcmAudioCodec codec)
         {
-            const int DesiredSampleRate = 48000;
-            const int DesiredBitDepth = 16;
             const int Application = 2049; // OPUS_APPLICATION_AUDIO
 
-            if (properties.SamplingRate != DesiredSampleRate)
-                ThrowArgumentOutOfRangeException(nameof(properties),
-                    properties,
-                    $"{nameof(PcmEncodingTranscoder)} does not support streams " +
-                    $"with sampling rates other than {DesiredSampleRate} Hz.");
+            Debug.Assert(codec.BitDepth == sizeof(short) * 8);
+            Debug.Assert(codec.ChannelCount == 2);
+            Debug.Assert(codec.Endianness == SampleEndianness.LittleEndian);
+            Debug.Assert(codec.Format == SampleFormat.SignedInteger);
+            Debug.Assert(codec.SamplingRate == 48000);
 
-            if (properties.BitDepth != DesiredBitDepth)
-                ThrowArgumentOutOfRangeException(nameof(properties),
-                    properties,
-                    $"{nameof(PcmEncodingTranscoder)} does not support streams " +
-                    $"with bit depths other than {DesiredBitDepth}.");
-
-            _channelCount = properties.ChannelCount;
-
+            _codec = codec;
             int status;
-            _encoder = opus_encoder_create(DesiredSampleRate, _channelCount,
-                Application, &status);
+            _encoder = opus_encoder_create(codec.SamplingRate,
+                codec.ChannelCount, Application, &status);
 
             if (status < 0)
                 ThrowExternalException("Could not create Opus Encoder",
@@ -93,8 +83,8 @@ namespace Thermite.Transcoders.Pcm
                         if (frame.IsEmpty)
                             continue;
 
-                        var encoded = TryWritePacket(frame, writer);
-                        Debug.Assert(encoded > 0, "Opus packet encode error");
+                        var encoded = TryEncodeFrame(frame, writer);
+                        Debug.Assert(encoded > 0, "Opus encode error");
 
                         writer.Advance(encoded);
                     }
@@ -116,14 +106,14 @@ namespace Thermite.Transcoders.Pcm
                 frame = default;
                 var reader = new SequenceReader<byte>(sequence);
 
-                if (!reader.TryReadLittleEndian(out short packetLength))
+                if (!reader.TryReadLittleEndian(out short frameLength))
                     return false;
 
-                if (sequence.Length < packetLength)
+                if (sequence.Length < frameLength)
                     return false;
 
-                frame = sequence.Slice(reader.Position, packetLength);
-                var nextFrame = sequence.GetPosition(packetLength,
+                frame = sequence.Slice(reader.Position, frameLength);
+                var nextFrame = sequence.GetPosition(frameLength,
                     reader.Position);
                 sequence = sequence.Slice(nextFrame);
                 return true;
@@ -136,18 +126,18 @@ namespace Thermite.Transcoders.Pcm
             => new ValueTask<IAudioCodec>(
                 OpusAudioCodec.DiscordCompatibleOpus);
 
-        private unsafe int TryWritePacket(ReadOnlySequence<byte> packet,
+        private unsafe int TryEncodeFrame(ReadOnlySequence<byte> frame,
             PipeWriter writer)
         {
-            if (packet.IsSingleSegment)
-                return WriteInternal(_encoder, _channelCount, packet.FirstSpan,
-                    writer);
+            if (frame.IsSingleSegment)
+                return WriteInternal(_encoder, _codec.ChannelCount,
+                    frame.FirstSpan, writer);
 
-            var buffer = ArrayPool<byte>.Shared.Rent((int)packet.Length);
-            packet.CopyTo(buffer);
+            var buffer = ArrayPool<byte>.Shared.Rent((int)frame.Length);
+            frame.CopyTo(buffer);
 
-            var status = WriteInternal(_encoder, _channelCount,
-                buffer.AsSpan().Slice(0, (int)packet.Length),
+            var status = WriteInternal(_encoder, _codec.ChannelCount,
+                buffer.AsSpan().Slice(0, (int)frame.Length),
                 writer);
 
             ArrayPool<byte>.Shared.Return(buffer);
@@ -155,14 +145,14 @@ namespace Thermite.Transcoders.Pcm
             return status;
 
             static unsafe int WriteInternal(OpusEncoder* encoder,
-                int channelCount, ReadOnlySpan<byte> packet, PipeWriter writer)
+                int channelCount, ReadOnlySpan<byte> frame, PipeWriter writer)
             {
                 var block = writer.GetSpan();
 
-                int frameSize = packet.Length / sizeof(short) / channelCount;
+                int frameSize = frame.Length / sizeof(short) / channelCount;
 
                 int encoded;
-                fixed (byte* sampleData = packet)
+                fixed (byte* sampleData = frame)
                 fixed (byte* outputBlock = block.Slice(2))
                     encoded = opus_encode(encoder, (short*)sampleData,
                         frameSize, outputBlock, block.Length);

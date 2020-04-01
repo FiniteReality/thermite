@@ -154,14 +154,14 @@ namespace Thermite.Discord
                 frame = default;
                 var reader = new SequenceReader<byte>(sequence);
 
-                if (!reader.TryReadLittleEndian(out short packetLength))
+                if (!reader.TryReadLittleEndian(out short frameLength))
                     return false;
 
-                if (sequence.Length < packetLength)
+                if (sequence.Length < frameLength)
                     return false;
 
-                frame = sequence.Slice(reader.Position, packetLength);
-                var nextFrame = sequence.GetPosition(packetLength,
+                frame = sequence.Slice(reader.Position, frameLength);
+                var nextFrame = sequence.GetPosition(frameLength,
                     reader.Position);
                 sequence = sequence.Slice(nextFrame);
                 return true;
