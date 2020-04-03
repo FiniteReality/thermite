@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
 using Thermite.Natives;
+
+using static Thermite.Internal.FrameParsingUtilities;
 using static Thermite.Natives.MiniMp3;
 
 namespace Thermite.Transcoders.Mpeg
