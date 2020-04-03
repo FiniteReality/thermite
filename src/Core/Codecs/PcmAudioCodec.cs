@@ -1,3 +1,5 @@
+using static Thermite.Utilities.ThrowHelpers;
+
 namespace Thermite.Codecs
 {
     /// <summary>
@@ -30,6 +32,12 @@ namespace Thermite.Codecs
         public PcmAudioCodec(int bitDepth, int channelCount,
             SampleEndianness endianness, SampleFormat format, int samplingRate)
         {
+            if ((endianness != SampleEndianness.Indeterminate) &&
+                (format == SampleFormat.FloatingPoint ||
+                 format == SampleFormat.FixedPoint))
+                ThrowArgumentException(nameof(endianness),
+                    "Fixed or floating point samples cannot have endianness");
+
             BitDepth = bitDepth;
             ChannelCount = channelCount;
             Endianness = endianness;
