@@ -15,7 +15,7 @@ namespace Thermite.Transcoders.Mpeg
 {
     internal sealed class MpegAudioTranscoder : IAudioTranscoder
     {
-        private MpegAudioCodec _codec;
+        private readonly MpegAudioCodec _codec;
         private readonly PipeReader _input;
         private readonly Pipe _outputPipe;
 
