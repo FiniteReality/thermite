@@ -74,7 +74,7 @@ namespace Thermite.Transcoders.Pcm
 
                     while (TryReadFrame(ref sequence, out var frame))
                     {
-                        if (!TryWriteFrame(frame, writer))
+                        if (!TryTranscodeFrame(frame, writer))
                             return;
                     }
 
@@ -88,7 +88,7 @@ namespace Thermite.Transcoders.Pcm
                 await _input.CompleteAsync();
             }
 
-            static unsafe bool TryWriteFrame(ReadOnlySequence<byte> frame,
+            static unsafe bool TryTranscodeFrame(ReadOnlySequence<byte> frame,
                 PipeWriter writer)
             {
                 var elements = (int)(frame.Length / Vector<T>.Count);
