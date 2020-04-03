@@ -4,6 +4,8 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
@@ -91,35 +93,85 @@ namespace Thermite.Transcoders.Pcm
             static unsafe bool TryTranscodeFrame(ReadOnlySequence<byte> frame,
                 PipeWriter writer)
             {
-                var elements = (int)(frame.Length / Vector<T>.Count);
+                var elements = (int)(frame.Length / sizeof(Vector<T>));
 
-                var destination = writer.GetSpan(
-                        sizeof(short) + sizeof(float) * elements);
+                var destination = writer.GetSpan(sizeof(short) +
+                    (int)frame.Length * (sizeof(float) / sizeof(T)));
                 var pcmDestination = destination.Slice(sizeof(short));
                 var bytesWritten = 0;
 
+                Unsafe.SkipInit(out Vector<T> vectorInput);
                 for (var x = 0; x < elements; x++)
                 {
-                    ReadOnlySequence<byte> sample = frame.Slice(
-                        x * sizeof(T), sizeof(T));
+                    ReadOnlySequence<byte> sampleBlock = frame.Slice(
+                        x * sizeof(Vector<T>), sizeof(Vector<T>));
 
-                    ReadOnlySpan<byte> buffer = sample.FirstSpan;
+                    var block = Unsafe.AsPointer(ref vectorInput);
+                    var writableBuffer = new Span<byte>(
+                        block, sizeof(Vector<T>));
 
-                    if (!sample.IsSingleSegment)
-                    {
-                        var block = stackalloc byte[sizeof(T)];
-                        var writableBuffer = new Span<byte>(block, sizeof(T));
-                        sample.CopyTo(writableBuffer);
+                    sampleBlock.CopyTo(writableBuffer);
 
-                        buffer = writableBuffer;
-                    }
-
-                    Vector<T> input = new Vector<T>(buffer);
-                    if (!TryWriteAsFloat(input, pcmDestination,
+                    if (!TryWriteAsFloat(vectorInput, pcmDestination,
                         ref bytesWritten))
                         return false;
 
                     pcmDestination = pcmDestination.Slice(bytesWritten);
+                }
+
+                Span<float> remainingDestination =
+                    MemoryMarshal.Cast<byte, float>(pcmDestination);
+                SequenceReader<byte> remaining = new SequenceReader<byte>(
+                    frame.Slice(elements * sizeof(Vector<T>)));
+
+                for (int x = 0; !remaining.End; x++)
+                {
+                    if (typeof(T) == typeof(sbyte))
+                    {
+                        if (!remaining.TryRead(out byte value))
+                            return false;
+
+                        remainingDestination[x] =
+                            (sbyte)value / MaxSignedValue;
+                    }
+                    else if (typeof(T) == typeof(byte))
+                    {
+                        if (!remaining.TryRead(out byte value))
+                            return false;
+
+                        remainingDestination[x] =
+                            (value - MaxSignedValue) / MaxSignedValue;
+                    }
+                    else if (typeof(T) == typeof(short))
+                    {
+                        if (!remaining.TryReadLittleEndian(out short value))
+                            return false;
+
+                        remainingDestination[x] = value / MaxSignedValue;
+                    }
+                    else if (typeof(T) == typeof(ushort))
+                    {
+                        if (!remaining.TryReadLittleEndian(out short value))
+                            return false;
+
+                        remainingDestination[x] =
+                            ((ushort)value - MaxSignedValue) / MaxSignedValue;
+                    }
+                    else if (typeof(T) == typeof(int))
+                    {
+                        if (!remaining.TryReadLittleEndian(out int value))
+                            return false;
+
+                        remainingDestination[x] = value / MaxSignedValue;
+                    }
+                    else if (typeof(T) == typeof(uint))
+                    {
+                        if (!remaining.TryReadLittleEndian(out int value))
+                            return false;
+
+                        remainingDestination[x] =
+                            ((uint)value - MaxSignedValue) / MaxSignedValue;
+                    }
                 }
 
                 if (!BinaryPrimitives.TryWriteInt16LittleEndian(
