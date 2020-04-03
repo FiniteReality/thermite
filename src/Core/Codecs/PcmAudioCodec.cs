@@ -38,6 +38,10 @@ namespace Thermite.Codecs
                 ThrowArgumentException(nameof(endianness),
                     "Fixed or floating point samples cannot have endianness");
 
+            if (bitDepth == 8 && endianness != SampleEndianness.Indeterminate)
+                ThrowArgumentException(nameof(endianness),
+                    "8-bit signed or unsigned samples cannot have endianness");
+
             BitDepth = bitDepth;
             ChannelCount = channelCount;
             Endianness = endianness;
