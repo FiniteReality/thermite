@@ -1,29 +1,22 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
 using Thermite.Natives;
-
 using static Thermite.Natives.MiniMp3;
 
 namespace Thermite.Transcoders.Mpeg
 {
-    /// <summary>
-    /// A transcoder which transcodes MPEG audio into PCM samples.
-    /// </summary>
-    public sealed class MpegAudioTranscoder : IAudioTranscoder
+    internal sealed class MpegAudioTranscoder : IAudioTranscoder
     {
         private MpegAudioCodec _codec;
         private readonly PipeReader _input;
         private readonly Pipe _outputPipe;
 
-        /// <inheritdoc/>
         public PipeReader Output => _outputPipe.Reader;
 
         internal MpegAudioTranscoder(PipeReader input, MpegAudioCodec codec)
@@ -33,7 +26,6 @@ namespace Thermite.Transcoders.Mpeg
             _outputPipe = new Pipe();
         }
 
-        /// <inheritdoc/>
         public async Task RunAsync(
             CancellationToken cancellationToken = default)
         {
@@ -84,26 +76,6 @@ namespace Thermite.Transcoders.Mpeg
                 await _outputPipe.Writer.CompleteAsync();
             }
 
-            static bool TryReadFrame(
-                ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> frame)
-            {
-                frame = default;
-                var reader = new SequenceReader<byte>(sequence);
-
-                if (!reader.TryReadLittleEndian(out short frameLength))
-                    return false;
-
-                if (sequence.Length < frameLength)
-                    return false;
-
-                frame = sequence.Slice(reader.Position, frameLength);
-                var nextFrame = sequence.GetPosition(frameLength,
-                    reader.Position);
-                sequence = sequence.Slice(nextFrame);
-                return true;
-            }
-
             static unsafe bool TryProcessFrame(
                 ReadOnlySequence<byte> buffer, ref mp3dec_t decoder,
                 Span<byte> destination, out int bytesWritten)
@@ -135,7 +107,6 @@ namespace Thermite.Transcoders.Mpeg
             }
         }
 
-        /// <inheritdoc/>
         public ValueTask<IAudioCodec> GetOutputCodecAsync(
             CancellationToken cancellationToken = default)
             => new ValueTask<IAudioCodec>(
@@ -146,7 +117,6 @@ namespace Thermite.Transcoders.Mpeg
                     SampleFormat.SignedInteger,
                     _codec.SamplingRate));
 
-        /// <inheritdoc/>
         public ValueTask DisposeAsync()
         {
             return default;

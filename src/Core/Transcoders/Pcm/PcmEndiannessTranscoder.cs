@@ -1,26 +1,20 @@
-using System;
-using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
 
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.FrameParsingUtilities;
 
 namespace Thermite.Transcoders.Pcm
 {
-    /// <summary>
-    /// A transcoder which encodes PCM sample data to Opus as it passes
-    /// through.
-    /// </summary>
-    public sealed class PcmEndiannessTranscoder : IAudioTranscoder
+    internal sealed class PcmEndiannessTranscoder<T> : IAudioTranscoder
+        where T : unmanaged
     {
         private readonly PipeReader _input;
         private readonly PcmAudioCodec _codec;
         private readonly Pipe _pipe;
 
-        /// <inheritdoc/>
         public PipeReader Output => _pipe.Reader;
 
         internal PcmEndiannessTranscoder(PipeReader input,
@@ -31,7 +25,6 @@ namespace Thermite.Transcoders.Pcm
             _pipe = new Pipe();
         }
 
-        /// <inheritdoc/>
         public async Task RunAsync(
             CancellationToken cancellationToken = default)
         {
@@ -63,29 +56,8 @@ namespace Thermite.Transcoders.Pcm
                 await writer.CompleteAsync();
                 await _input.CompleteAsync();
             }
-
-            static bool TryReadFrame(
-                ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> frame)
-            {
-                frame = default;
-                var reader = new SequenceReader<byte>(sequence);
-
-                if (!reader.TryReadLittleEndian(out short frameLength))
-                    return false;
-
-                if (sequence.Length < frameLength)
-                    return false;
-
-                frame = sequence.Slice(reader.Position, frameLength);
-                var nextFrame = sequence.GetPosition(frameLength,
-                    reader.Position);
-                sequence = sequence.Slice(nextFrame);
-                return true;
-            }
         }
 
-        /// <inheritdoc/>
         public ValueTask<IAudioCodec> GetOutputCodecAsync(
             CancellationToken cancellationToken = default)
             => new ValueTask<IAudioCodec>(
@@ -96,7 +68,6 @@ namespace Thermite.Transcoders.Pcm
                     _codec.Format,
                     _codec.SamplingRate));
 
-        /// <inheritdoc/>
         public ValueTask DisposeAsync()
         {
             return default;

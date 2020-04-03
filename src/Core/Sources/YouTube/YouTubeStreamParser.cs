@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 
-using static Thermite.Internal.ParsingUtilities;
+using static Thermite.Internal.TextParsingUtilities;
 
 namespace Thermite.Sources.YouTube
 {

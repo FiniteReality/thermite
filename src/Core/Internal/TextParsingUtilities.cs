@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace Thermite.Internal
 {
-    internal static class ParsingUtilities
+    internal static class TextParsingUtilities
     {
         [DebuggerStepThrough]
         public static bool TryGetKeyValuePair(

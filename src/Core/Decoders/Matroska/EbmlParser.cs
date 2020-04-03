@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Numerics;
 using System.Text;
 
-using static Thermite.Internal.ParsingUtilities;
+using static Thermite.Internal.TextParsingUtilities;
 
 namespace Thermite.Decoders.Matroska
 {

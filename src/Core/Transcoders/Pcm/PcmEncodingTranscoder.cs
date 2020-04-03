@@ -8,16 +8,14 @@ using System.Threading.Tasks;
 using Thermite.Codecs;
 using Thermite.Natives;
 
+using static Thermite.Internal.FrameParsingUtilities;
 using static Thermite.Natives.Opus;
 using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Transcoders.Pcm
 {
-    /// <summary>
-    /// A transcoder which encodes PCM sample data to Opus as it passes
-    /// through.
-    /// </summary>
-    public sealed class PcmEncodingTranscoder : IAudioTranscoder
+    internal sealed class PcmEncodingTranscoder<T> : IAudioTranscoder
+        where T : unmanaged
     {
         private readonly PcmAudioCodec _codec;
         private readonly PipeReader _input;
@@ -25,7 +23,6 @@ namespace Thermite.Transcoders.Pcm
 
         private unsafe OpusEncoder* _encoder;
 
-        /// <inheritdoc/>
         public PipeReader Output => _pipe.Reader;
 
         internal unsafe PcmEncodingTranscoder(PipeReader input,
@@ -33,10 +30,11 @@ namespace Thermite.Transcoders.Pcm
         {
             const int Application = 2049; // OPUS_APPLICATION_AUDIO
 
-            Debug.Assert(codec.BitDepth == sizeof(short) * 8);
+            Debug.Assert(
+                typeof(T) == typeof(short) ||
+                typeof(T) == typeof(float));
+
             Debug.Assert(codec.ChannelCount == 2);
-            Debug.Assert(codec.Endianness == SampleEndianness.LittleEndian);
-            Debug.Assert(codec.Format == SampleFormat.SignedInteger);
             Debug.Assert(codec.SamplingRate == 48000);
 
             _codec = codec;
@@ -52,9 +50,6 @@ namespace Thermite.Transcoders.Pcm
             _pipe = new Pipe();
         }
 
-        /// <summary>
-        /// Finalizes an instance of <see cref="PcmEncodingTranscoder"/>.
-        /// </summary>
         ~PcmEncodingTranscoder()
         {
             // N.B. not awaited since implementation of DisposeAsync is
@@ -63,7 +58,6 @@ namespace Thermite.Transcoders.Pcm
             GC.SuppressFinalize(this);
         }
 
-        /// <inheritdoc/>
         public async Task RunAsync(
             CancellationToken cancellationToken = default)
         {
@@ -98,29 +92,8 @@ namespace Thermite.Transcoders.Pcm
                 await writer.CompleteAsync();
                 await _input.CompleteAsync();
             }
-
-            static bool TryReadFrame(
-                ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> frame)
-            {
-                frame = default;
-                var reader = new SequenceReader<byte>(sequence);
-
-                if (!reader.TryReadLittleEndian(out short frameLength))
-                    return false;
-
-                if (sequence.Length < frameLength)
-                    return false;
-
-                frame = sequence.Slice(reader.Position, frameLength);
-                var nextFrame = sequence.GetPosition(frameLength,
-                    reader.Position);
-                sequence = sequence.Slice(nextFrame);
-                return true;
-            }
         }
 
-        /// <inheritdoc/>
         public ValueTask<IAudioCodec> GetOutputCodecAsync(
             CancellationToken cancellationToken = default)
             => new ValueTask<IAudioCodec>(
@@ -149,13 +122,18 @@ namespace Thermite.Transcoders.Pcm
             {
                 var block = writer.GetSpan();
 
-                int frameSize = frame.Length / sizeof(short) / channelCount;
+                int frameSize = frame.Length / sizeof(T) / channelCount;
 
-                int encoded;
+                int encoded = default;
                 fixed (byte* sampleData = frame)
                 fixed (byte* outputBlock = block.Slice(2))
-                    encoded = opus_encode(encoder, (short*)sampleData,
-                        frameSize, outputBlock, block.Length);
+                    if (typeof(T) == typeof(short))
+                        encoded = opus_encode(encoder, (short*)sampleData,
+                            frameSize, outputBlock, block.Length);
+                    else if (typeof(T) == typeof(float))
+                        encoded = opus_encode_float(encoder,
+                            (float*)sampleData, frameSize, outputBlock,
+                                block.Length);
 
                 if (encoded > 0 &&
                     !BinaryPrimitives.TryWriteInt16LittleEndian(block,
@@ -166,7 +144,6 @@ namespace Thermite.Transcoders.Pcm
             }
         }
 
-        /// <inheritdoc/>
         public unsafe ValueTask DisposeAsync()
         {
             // N.B. Change implementation of finalizer if this becomes async!

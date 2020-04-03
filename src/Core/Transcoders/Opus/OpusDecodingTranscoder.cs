@@ -9,15 +9,13 @@ using System.Threading.Tasks;
 using Thermite.Codecs;
 using Thermite.Natives;
 
+using static Thermite.Internal.FrameParsingUtilities;
 using static Thermite.Natives.Opus;
 using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Transcoders.Opus
 {
-    /// <summary>
-    /// A transcoder which decodes Opus audio packets into PCM samples.
-    /// </summary>
-    public sealed class OpusDecodingTranscoder : IAudioTranscoder
+    internal sealed class OpusDecodingTranscoder : IAudioTranscoder
     {
         private const int OutputBufferSize = 1 << 12; // 4k
 
@@ -27,7 +25,6 @@ namespace Thermite.Transcoders.Opus
 
         private unsafe OpusDecoder* _decoder;
 
-        /// <inheritdoc/>
         public PipeReader Output => _pipe.Reader;
 
         internal unsafe OpusDecodingTranscoder(PipeReader input,
@@ -47,17 +44,12 @@ namespace Thermite.Transcoders.Opus
             _pipe = new Pipe();
         }
 
-        /// <summary>
-        /// Finalizes an instance of
-        /// <see cref="OpusDecodingTranscoder"/>.
-        /// </summary>
         ~OpusDecodingTranscoder()
         {
             _ = DisposeAsync();
             GC.SuppressFinalize(this);
         }
 
-        /// <inheritdoc/>
         public async Task RunAsync(
             CancellationToken cancellationToken = default)
         {
@@ -93,29 +85,8 @@ namespace Thermite.Transcoders.Opus
                 await writer.CompleteAsync();
                 await _input.CompleteAsync();
             }
-
-            static bool TryReadFrame(
-                ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> frame)
-            {
-                frame = default;
-                var reader = new SequenceReader<byte>(sequence);
-
-                if (!reader.TryReadLittleEndian(out short frameLength))
-                    return false;
-
-                if (sequence.Length < frameLength)
-                    return false;
-
-                frame = sequence.Slice(reader.Position, frameLength);
-                var nextFrame = sequence.GetPosition(frameLength,
-                    reader.Position);
-                sequence = sequence.Slice(nextFrame);
-                return true;
-            }
         }
 
-        /// <inheritdoc/>
         public ValueTask<IAudioCodec> GetOutputCodecAsync(
             CancellationToken cancellationToken = default)
             => new ValueTask<IAudioCodec>(
@@ -166,7 +137,6 @@ namespace Thermite.Transcoders.Opus
             }
         }
 
-        /// <inheritdoc/>
         public unsafe ValueTask DisposeAsync()
         {
             if (_decoder != null)

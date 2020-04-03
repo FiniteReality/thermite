@@ -6,8 +6,9 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-using static Thermite.Natives.Opus;
 using static System.Buffers.Binary.BinaryPrimitives;
+using static Thermite.Internal.FrameParsingUtilities;
+using static Thermite.Natives.Opus;
 using static Thermite.Natives.Sodium;
 
 namespace Thermite.Discord
@@ -146,26 +147,6 @@ namespace Thermite.Discord
             var bytesSent = socket.SendTo(pooledPacketBuffer, 0, length,
                 SocketFlags.None, endpoint);
             ArrayPool<byte>.Shared.Return(pooledPacketBuffer);
-
-            static bool TryReadFrame(
-                ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> frame)
-            {
-                frame = default;
-                var reader = new SequenceReader<byte>(sequence);
-
-                if (!reader.TryReadLittleEndian(out short frameLength))
-                    return false;
-
-                if (sequence.Length < frameLength)
-                    return false;
-
-                frame = sequence.Slice(reader.Position, frameLength);
-                var nextFrame = sequence.GetPosition(frameLength,
-                    reader.Position);
-                sequence = sequence.Slice(nextFrame);
-                return true;
-            }
 
             static unsafe bool TryEncodePacket(
                 ReadOnlySequence<byte> opus,
