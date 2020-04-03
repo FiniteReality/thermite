@@ -52,18 +52,12 @@ namespace Thermite.Transcoders
                     => InvalidCodec(),
 
                 // any big-endian integer data to little endian
-                { Endianness: SampleEndianness.BigEndian,
-                  Format: SampleFormat.UnsignedInteger,
-                  BitDepth: 8 }
-                    => new PcmEndiannessTranscoder<byte>(input, pcmCodec),
-                { Endianness: SampleEndianness.BigEndian,
-                  Format: SampleFormat.SignedInteger,
-                  BitDepth: 8 }
-                    => new PcmEndiannessTranscoder<sbyte>(input, pcmCodec),
+                // N.B. use unsigned type params here to allow for this to be a
+                // simple byte swap.
                 { Endianness: SampleEndianness.BigEndian,
                   Format: SampleFormat.SignedInteger,
                   BitDepth: 16 }
-                    => new PcmEndiannessTranscoder<short>(input, pcmCodec),
+                    => new PcmEndiannessTranscoder<ushort>(input, pcmCodec),
                 { Endianness: SampleEndianness.BigEndian,
                   Format: SampleFormat.UnsignedInteger,
                   BitDepth: 16 }
@@ -71,7 +65,7 @@ namespace Thermite.Transcoders
                 { Endianness: SampleEndianness.BigEndian,
                   Format: SampleFormat.SignedInteger,
                   BitDepth: 32 }
-                    => new PcmEndiannessTranscoder<int>(input, pcmCodec),
+                    => new PcmEndiannessTranscoder<uint>(input, pcmCodec),
 
                 // any little-endian integer data to float
                 { Format: SampleFormat.UnsignedInteger,
