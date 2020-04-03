@@ -27,32 +27,82 @@ namespace Thermite.Transcoders
 
             return pcmCodec switch
             {
-                { ChannelCount: 2, SamplingRate: 48000, BitDepth: 16,
+                // formats supported by discord/libopus
+                { ChannelCount: 2,
+                  SamplingRate: 48000,
+                  BitDepth: 16,
                   Format: SampleFormat.SignedInteger,
                   Endianness: SampleEndianness.LittleEndian }
-                    => new PcmEncodingTranscoder(input, pcmCodec),
+                    => new PcmEncodingTranscoder<short>(input, pcmCodec),
+                { ChannelCount: 2,
+                  SamplingRate: 48000,
+                  BitDepth: 32,
+                  Format: SampleFormat.FloatingPoint,
+                  Endianness: SampleEndianness.Indeterminate }
+                    => new PcmEncodingTranscoder<float>(input, pcmCodec),
 
-                { Endianness: var endian } when
-                    endian != SampleEndianness.LittleEndian
-                    => new PcmEndiannessTranscoder(input, pcmCodec),
+                // explicitly unsupported formats
+                // TODO: signed 24-bit audio has a strange encoding
+                { BitDepth: 24,
+                  Format: SampleFormat.SignedInteger }
+                    => InvalidCodec(), // not supported
+                // N.B. unsigned 32-bit audio has floating point error
+                { BitDepth: 32,
+                  Format: SampleFormat.UnsignedInteger }
+                    => InvalidCodec(),
 
-                { Format: var format } when
-                    format != SampleFormat.SignedInteger
-                    => new PcmFormatTranscoder(input, pcmCodec),
+                // any big-endian integer data to little endian
+                { Endianness: SampleEndianness.BigEndian,
+                  Format: SampleFormat.UnsignedInteger,
+                  BitDepth: 8 }
+                    => new PcmEndiannessTranscoder<byte>(input, pcmCodec),
+                { Endianness: SampleEndianness.BigEndian,
+                  Format: SampleFormat.SignedInteger,
+                  BitDepth: 8 }
+                    => new PcmEndiannessTranscoder<sbyte>(input, pcmCodec),
+                { Endianness: SampleEndianness.BigEndian,
+                  Format: SampleFormat.SignedInteger,
+                  BitDepth: 16 }
+                    => new PcmEndiannessTranscoder<short>(input, pcmCodec),
+                { Endianness: SampleEndianness.BigEndian,
+                  Format: SampleFormat.UnsignedInteger,
+                  BitDepth: 16 }
+                    => new PcmEndiannessTranscoder<ushort>(input, pcmCodec),
+                { Endianness: SampleEndianness.BigEndian,
+                  Format: SampleFormat.SignedInteger,
+                  BitDepth: 32 }
+                    => new PcmEndiannessTranscoder<int>(input, pcmCodec),
 
-                { BitDepth: var bitDepth } when
-                    bitDepth != 16
-                    => new PcmBitDepthTranscoder(input, pcmCodec),
+                // any little-endian integer data to float
+                { Format: SampleFormat.UnsignedInteger,
+                  BitDepth: 8 }
+                    => new PcmFloatTranscoder<byte>(input, pcmCodec),
+                { Format: SampleFormat.SignedInteger,
+                  BitDepth: 8 }
+                    => new PcmFloatTranscoder<sbyte>(input, pcmCodec),
+                { Format: SampleFormat.SignedInteger,
+                  BitDepth: 16 }
+                    => new PcmFloatTranscoder<short>(input, pcmCodec),
+                { Format: SampleFormat.UnsignedInteger,
+                  BitDepth: 16 }
+                    => new PcmFloatTranscoder<ushort>(input, pcmCodec),
+                { Format: SampleFormat.SignedInteger,
+                  BitDepth: 32 }
+                    => new PcmFloatTranscoder<int>(input, pcmCodec),
 
-                { SamplingRate: var samplingRate } when
-                    samplingRate != 48000
-                    => new PcmResamplingTranscoder(input, pcmCodec),
-
+                // any channel count to stereo
                 { ChannelCount: 1 }
                     => new PcmChannelDuplicationTranscoder(input, pcmCodec),
-                { ChannelCount : _ }
+                { ChannelCount: var channels }
+                    when channels > 2
                     => new PcmDownmixingTranscoder(input, pcmCodec),
 
+                // any sampling rate to 48khz
+                { SamplingRate: var rate }
+                    when rate != 48000
+                    => new PcmResamplingTranscoder(input, pcmCodec),
+
+                // any not explicitly supported configuration
                 _ => InvalidCodec()
             };
 
