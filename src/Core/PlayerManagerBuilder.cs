@@ -2,7 +2,7 @@ using System;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.ThrowHelpers;
 
 namespace Thermite
 {

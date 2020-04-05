@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Thermite.Sources.YouTube;
 using Thermite.Internal;
 
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.ThrowHelpers;
 
 namespace Thermite.Sources
 {

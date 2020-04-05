@@ -1,6 +1,6 @@
 using System;
 
-namespace Thermite.Utilities
+namespace Thermite.Internal
 {
     [AttributeUsage(
         AttributeTargets.Field |

@@ -1,9 +1,9 @@
 using System;
 
 using static System.Threading.Interlocked;
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.ThrowHelpers;
 
-namespace Thermite.Utilities
+namespace Thermite.Internal
 {
     internal struct State
     {

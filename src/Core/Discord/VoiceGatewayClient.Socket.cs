@@ -6,8 +6,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-using static Thermite.Utilities.State;
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.State;
+using static Thermite.Internal.ThrowHelpers;
 
 namespace Thermite.Discord
 {

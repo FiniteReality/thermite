@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using Thermite.Utilities;
+using Thermite.Internal;
 
 namespace Thermite.Natives
 {

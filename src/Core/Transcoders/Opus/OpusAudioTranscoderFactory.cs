@@ -5,7 +5,7 @@ using System.IO.Pipelines;
 using Thermite.Codecs;
 using Thermite.Transcoders.Opus;
 
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.ThrowHelpers;
 
 namespace Thermite.Transcoders
 {

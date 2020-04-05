@@ -11,10 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Discord.Models;
 using Thermite.Internal;
-using Thermite.Utilities;
 
-using static Thermite.Utilities.State;
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.State;
+using static Thermite.Internal.ThrowHelpers;
 
 namespace Thermite.Discord
 {

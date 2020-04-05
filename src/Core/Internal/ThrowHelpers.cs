@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Thermite.Utilities
+namespace Thermite.Internal
 {
     internal static class ThrowHelpers
     {
@@ -60,6 +60,13 @@ namespace Thermite.Utilities
         public static void ThrowObjectDisposedException(string? objectName)
         {
             throw new ObjectDisposedException(objectName);
+        }
+
+        [DoesNotReturn]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowPlatformNotSupportedException(string? message)
+        {
+            throw new PlatformNotSupportedException(message);
         }
     }
 }

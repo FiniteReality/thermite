@@ -10,7 +10,7 @@ using Thermite.Natives;
 
 using static Thermite.Internal.FrameParsingUtilities;
 using static Thermite.Natives.Opus;
-using static Thermite.Utilities.ThrowHelpers;
+using static Thermite.Internal.ThrowHelpers;
 
 namespace Thermite.Transcoders.Pcm
 {
