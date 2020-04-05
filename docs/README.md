@@ -24,6 +24,18 @@ Feel free to join my Discord server: https://discord.gg/Y4d9ZWJ
 - Pooled UDP clients to saturate I/O
 - Fully async internal API to prevent thread blocking
 - ~~Low~~ Zero(?) allocation audio implementation
+- Vectorised code-paths for transcoding
+
+## Platform Support ##
+
+Thermite will currently **ONLY** run on processors supporting at least one of
+these instruction sets:
+- SSE2
+- SSSE3
+- AVX2
+
+This means **NO** ARM support - your system **MUST** run an Intel or AMD
+processor purchased after 2000.
 
 ## Documentation ##
 

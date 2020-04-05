@@ -13,49 +13,32 @@ using System.Threading.Tasks;
 using Thermite.Codecs;
 
 using static Thermite.Internal.FrameParsingUtilities;
+using static Thermite.Internal.ThrowHelpers;
 
 namespace Thermite.Transcoders.Pcm
 {
     internal sealed class PcmEndiannessTranscoder<T> : IAudioTranscoder
         where T : unmanaged
     {
-        private static ReadOnlySpan<byte> ReverseUInt16Mask256
-            => new byte[]
-            {
-                1, 0,
+        private static readonly Vector128<byte> ReverseUInt16Mask
+            = Vector128.Create(
+                (byte)1, 0,
                 3, 2,
                 5, 4,
                 7, 6,
                 9, 8,
                 11, 10,
                 13, 12,
-                15, 14,
-                17, 16,
-                19, 18,
-                21, 20,
-                23, 22,
-                25, 24,
-                27, 26,
-                29, 28,
-                31, 30
-            };
-        private static ReadOnlySpan<byte> ReverseUInt16Mask128
-            => ReverseUInt16Mask256.Slice(0, 16);
+                15, 14
+            );
 
-        private static ReadOnlySpan<byte> ReverseUInt32Mask256
-            => new byte[]
-            {
-                3, 2, 1, 0,
+        private static readonly Vector128<byte> ReverseUInt32Mask
+            = Vector128.Create(
+                (byte)3, 2, 1, 0,
                 7, 6, 5, 4,
                 11, 10, 9, 8,
-                15, 14, 13, 12,
-                19, 18, 17, 16,
-                23, 22, 21, 20,
-                27, 26, 25, 24,
-                31, 30, 29, 28
-            };
-        private static ReadOnlySpan<byte> ReverseUInt32Mask128
-            => ReverseUInt32Mask256.Slice(0, 16);
+                15, 14, 13, 12
+            );
 
         private readonly PipeReader _input;
         private readonly PcmAudioCodec _codec;
@@ -63,14 +46,20 @@ namespace Thermite.Transcoders.Pcm
 
         public PipeReader Output => _pipe.Reader;
 
-        internal PcmEndiannessTranscoder(PipeReader input,
+        public PcmEndiannessTranscoder(PipeReader input,
             PcmAudioCodec codec)
         {
             Debug.Assert(
                 typeof(T) == typeof(ushort) ||
                 typeof(T) == typeof(uint));
 
-            Debug.Assert(Ssse3.IsSupported && Avx2.IsSupported);
+            Debug.Assert(codec.Endianness == SampleEndianness.BigEndian);
+
+            if (!Avx2.IsSupported &&
+                !Ssse3.IsSupported &&
+                !Sse2.IsSupported)
+                ThrowPlatformNotSupportedException(
+                    "Could not find support for AVX2, SSSE3 or SSE2");
 
             _input = input;
             _codec = codec;
@@ -131,11 +120,13 @@ namespace Thermite.Transcoders.Pcm
                     var vector = new Vector<T>(block);
 
                     if (sizeof(Vector<T>) >= sizeof(Vector256<T>))
-                        if (!TryWriteReversedBytes256(ref vector))
-                            return false;
+                    {
+                        vector = ReverseEndianness256(vector);
+                    }
                     else if (sizeof(Vector<T>) >= sizeof(Vector128<T>))
-                        if (!TryWriteReversedBytes128(ref vector))
-                            return false;
+                    {
+                        vector = ReverseEndianness128(vector);
+                    }
 
                     if (!vector.TryCopyTo(block))
                         return false;
@@ -173,60 +164,136 @@ namespace Thermite.Transcoders.Pcm
                 return true;
             }
 
-            static bool TryWriteReversedBytes256(ref Vector<T> input)
+            static Vector<T> ReverseEndianness256(Vector<T> input)
             {
-                var vector = input.AsVector256();
+                var vector = input.AsVector256().AsByte();
 
-                if (typeof(T) == typeof(ushort))
+                Unsafe.SkipInit(out Vector128<byte> mask);
+
+                if (Avx2.IsSupported || Ssse3.IsSupported)
                 {
-                    var mask = new Vector<byte>(ReverseUInt16Mask256)
-                        .AsVector256();
-                    var result = Avx2.Shuffle(
-                        vector.AsByte(), mask);
-
-                    input = result.As<byte, T>().AsVector();
-                    return true;
-                }
-                else if (typeof(T) == typeof(uint))
-                {
-                    var mask = new Vector<byte>(ReverseUInt32Mask256)
-                        .AsVector256();
-                    var result = Avx2.Shuffle(
-                        vector.AsByte(), mask);
-
-                    input = result.As<byte, T>().AsVector();
-                    return true;
+                    if (typeof(T) == typeof(ushort))
+                    {
+                        mask = ReverseUInt16Mask;
+                    }
+                    else if (typeof(T) == typeof(uint))
+                    {
+                        mask = ReverseUInt32Mask;
+                    }
                 }
 
-                return false;
+                if (Avx2.IsSupported)
+                {
+                    var result = Avx2.Shuffle(vector,
+                        Vector256.Create(mask, mask));
+
+                    return result.As<byte, T>().AsVector();
+                }
+                else if (Ssse3.IsSupported)
+                {
+                    var resultLower = Ssse3.Shuffle(
+                        vector.GetLower(), mask);
+                    var resultUpper = Ssse3.Shuffle(
+                        vector.GetUpper(), mask);
+
+                    var result = Vector256.Create(
+                        resultLower, resultUpper);
+
+                    return result.As<byte, T>().AsVector();
+                }
+                else if (Sse2.IsSupported)
+                {
+                    var result = Vector256.Create(
+                        ReverseEndiannessSse2(vector.GetLower()).AsByte(),
+                        ReverseEndiannessSse2(vector.GetUpper()).AsByte()
+                    );
+
+                    return result.As<byte, T>().AsVector();
+                }
+                else
+                {
+                    Debug.Fail("SSE2 not supported");
+
+                    return default;
+                }
             }
 
-            static bool TryWriteReversedBytes128(ref Vector<T> input)
+            static Vector<T> ReverseEndianness128(Vector<T> input)
             {
-                var vector = input.AsVector128();
+                var vector = input.AsVector128().AsByte();
 
+                if (Ssse3.IsSupported)
+                {
+                    Vector128<byte> mask;
+
+                    if (typeof(T) == typeof(ushort))
+                    {
+                        mask = ReverseUInt16Mask;
+                    }
+                    else if (typeof(T) == typeof(uint))
+                    {
+                        mask = ReverseUInt32Mask;
+                    }
+                    else
+                    {
+                        Debug.Fail($"{typeof(T)} wasn't ushort or uint");
+
+                        return default;
+                    }
+
+                    var result = Ssse3.Shuffle(vector, mask);
+                    return result.As<byte, T>().AsVector();
+                }
+                else if (Sse2.IsSupported)
+                {
+                    return ReverseEndiannessSse2(vector).AsVector();
+                }
+                else
+                {
+                    Debug.Fail("SSE2 not supported");
+
+                    return default;
+                }
+            }
+
+            static Vector128<T> ReverseEndiannessSse2(Vector128<byte> input)
+            {
                 if (typeof(T) == typeof(ushort))
                 {
-                    var mask = new Vector<byte>(ReverseUInt16Mask256)
-                        .AsVector128();
-                    var result = Ssse3.Shuffle(
-                        vector.AsByte(), mask);
+                    var mask = Vector128.Create((ushort)0x00FF);
+                    var val1 = input.AsUInt16();
+                    var val2 = val1;
 
-                    input = result.As<byte, T>().AsVector();
-                    return true;
+                    val1 = Sse2.And(val1, mask);
+                    val1 = Sse2.ShiftLeftLogical(val1, 8);
+                    val2 = Sse2.ShiftRightLogical(val2, 8);
+                    val2 = Sse2.And(val2, mask);
+
+                    return Sse2.Or(val1, val2).As<ushort, T>();
                 }
                 else if (typeof(T) == typeof(uint))
                 {
-                    var mask = new Vector<byte>(ReverseUInt32Mask256)
-                        .AsVector128();
-                    var result = Ssse3.Shuffle(
-                        vector.AsByte(), mask);
+                    var maskLower = Vector128.Create((uint)0x00FF00FF);
+                    var maskUpper = Vector128.Create((uint)0xFF00FF00);
+                    var val1 = input.AsUInt32();
+                    var val2 = val1;
 
-                    input = result.As<byte, T>().AsVector();
-                    return true;
+                    val1 = Sse2.And(val1, maskLower);
+                    val1 = Sse2.Or(Sse2.ShiftRightLogical(val1, 8),
+                        Sse2.ShiftLeftLogical(val1, 24));
+
+                    val2 = Sse2.And(val2, maskUpper);
+                    val2 = Sse2.Or(Sse2.ShiftLeftLogical(val2, 8),
+                        Sse2.ShiftRightLogical(val2, 24));
+
+                    return Sse2.Or(val1, val2).As<uint, T>();
                 }
+                else
+                {
+                    Debug.Fail($"{typeof(T)} wasn't ushort or uint");
 
-                return false;
+                    return default;
+                }
             }
         }
 
