@@ -40,7 +40,7 @@
       </NuspecProperties>
   </PropertyGroup>
 
-  <Target Name="GeneratePlaceholderFiles" BeforeTargets="GenerateNuspec" Condition="'$(CI)' != '' AND '$(RuntimeId)' == ''">
+  <Target Name="GeneratePlaceholderFiles" BeforeTargets="GenerateNuspec">
     <Touch Files="$(IntermediateOutputPath)_._" AlwaysCreate="true" />
   </Target>
 
