@@ -1,0 +1,58 @@
+name: Publish Thermite Natives to MyGet
+
+on:
+  push:
+    paths:
+      - 'natives/**'
+
+env:
+  MYGET_FEED: https://www.myget.org/F/thermite/api/v2/package
+  CI: true
+
+jobs:
+  build-natives:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-16.04, ubuntu-18.04]
+        arch: [x64, x86]
+
+        include:
+          - os: windows-latest
+            rid: win-${{ matrix.arch }}
+          - os: macos-latest
+            rid: osx.10.15-${{ matrix.arch }}
+          - os: ubuntu-16.04
+            rid: ubuntu.16.04-${{ matrix.arch }}
+          - os: ubuntu-18.04
+            rid: ubuntu.18.04-${{ matrix.arch }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.100-preview.2.20176.6
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Build Thermite
+        run: dotnet build tools/Thermite.Natives.sln --no-restore --configuration Release -p:Platform="${{ matrix.arch }}" -p:RuntimeId="${{ matrix.rid }}"
+
+#     - name: Run Unit Tests
+#       run: dotnet test  tools/Thermite.Natives.sln --no-build --configuration Release -p:Platform="${{ matrix.arch }}" -p:RuntimeId="${{ matrix.rid }}"
+
+      - name: Pack Thermite
+        run: dotnet pack tools/Thermite.Natives.sln --no-build --configuration Release -p:Platform="${{ matrix.arch }}" -p:RuntimeId="${{ matrix.rid }}"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          name: natives
+          path: ${{ github.workspace }}/artifacts/pkg/Release/
+
+      - name: Upload NuGet packages
+        run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
+        shell: bash

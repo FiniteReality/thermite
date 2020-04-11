@@ -10,52 +10,6 @@ env:
   CI: true
 
 jobs:
-  build-natives:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-16.04, ubuntu-18.04]
-
-        include:
-          - os: windows-latest
-            rid: win-x64
-          - os: macos-latest
-            rid: osx.10.15-x64
-          - os: ubuntu-16.04
-            rid: ubuntu.16.04-x64
-          - os: ubuntu-18.04
-            rid: ubuntu.18.04
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.100-preview.2.20176.6
-
-      - name: Install dependencies
-        run: dotnet restore
-
-      - name: Build Thermite
-        run: dotnet build tools/Thermite.Natives.sln --no-restore --configuration Release -p:RuntimeId="${{ matrix.rid }}"
-
-#     - name: Run Unit Tests
-#       run: dotnet test  tools/Thermite.Natives.sln --no-build --configuration Release -p:RuntimeId="${{ matrix.rid }}"
-
-      - name: Pack Thermite
-        run: dotnet pack tools/Thermite.Natives.sln --no-build --configuration Release -p:RuntimeId="${{ matrix.rid }}"
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v1.0.0
-        with:
-          name: natives
-          path: ${{ github.workspace }}/artifacts/pkg/Release/
-
-      - name: Upload NuGet packages
-        run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
-        shell: bash
-
   build:
     runs-on: [ubuntu-latest]
 
