@@ -6,7 +6,8 @@
     <VersionPrefix>1.0.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
 
-    <Compiler>clang</Compiler>
+    <Compiler Condition="'$(OS)' != 'Windows_NT'">clang</Compiler>
+    <Compiler Condition="'$(OS)' == 'Windows_NT'">gcc</Compiler>
     <CompilerOptions>-std=c11 -Wall -Wextra -pedantic -fPIC</CompilerOptions>
     <LinkerOptions>-Wall -Wextra -pedantic -fPIC</LinkerOptions>
 
