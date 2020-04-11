@@ -53,7 +53,7 @@ jobs:
           path: ${{ github.workspace }}/artifacts/pkg/Release/
 
       - name: Upload NuGet packages
-        run: dotnet nuget push artifacts/pkg/Release/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
+        run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
         shell: bash
 
   build:
@@ -85,5 +85,5 @@ jobs:
           path: ${{ github.workspace }}/artifacts/pkg/Release/
 
       - name: Upload NuGet packages
-        run: dotnet nuget push artifacts/pkg/Release/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
+        run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
         shell: bash
