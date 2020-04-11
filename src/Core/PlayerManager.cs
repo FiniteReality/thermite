@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Thermite.Discord;
 using Thermite.Internal;
-using Thermite.Internal;
 
 using static Thermite.Internal.State;
 using static Thermite.Internal.ThrowHelpers;
