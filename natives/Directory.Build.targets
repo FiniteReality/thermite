@@ -21,12 +21,14 @@
   <PropertyGroup>
     <PackageId Condition="'$(RuntimeId)' == ''">runtime.native.Thermite.Natives.$(AssemblyName)</PackageId>
     <PackageId Condition="'$(RuntimeId)' != ''">runtime.$(RuntimeId).Thermite.Natives.$(AssemblyName)</PackageId>
+    <BuildOutputTargetFolder Condition="'$(RuntimeId)' != ''">runtimes/$(RuntimeId)</BuildOutputTargetFolder>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetNativeBuildOutputsForPack</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CI)' != '' AND '$(RuntimeId)' == ''">
     <NuspecFile>metapackage.nuspec</NuspecFile>
     <NoBuild>true</NoBuild>
-    <!--<IncludeBuildOutput>false</IncludeBuildOutput>-->
     <NuspecProperties>
         Version=$(PackageVersion);
         Authors=$(Authors);
@@ -40,6 +42,18 @@
 
   <Target Name="GeneratePlaceholderFiles" BeforeTargets="GenerateNuspec" Condition="'$(CI)' != '' AND '$(RuntimeId)' == ''">
     <Touch Files="$(IntermediateOutputPath)_._" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="GetNativeBuildOutputsForPack" Condition="'$(RuntimeId)' != ''">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(IntermediateOutputPath)$(AssemblyName)$(TargetExt)">
+        <PackagePath>runtimes/$(RuntimeId)/native</PackagePath>
+      </TfmSpecificPackageFile>
+
+      <TfmSpecificPackageFile Include="$(IntermediateOutputPath)_._">
+        <PackagePath>lib/$(TargetFramework)</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
   </Target>
 
 </Project>
