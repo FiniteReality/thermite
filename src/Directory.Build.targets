@@ -28,6 +28,42 @@
     </InternalsVisibleTo>
   </ItemDefinitionGroup>
 
+  <ItemDefinitionGroup>
+    <ThermiteNative>
+    </ThermiteNative>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="@(ThermiteNative)">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>None</OutputItemType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeAssets>native;build</IncludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <!--
+    HACK: We trick NuGet here into including our natives in the restore graph
+    so that both a local build and a CI build work correctly.
+  -->
+  <Target Name="PreTrickNugetProjectRestoreGraph"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework">
+    <ItemGroup>
+      <ProjectReference Update="@(ThermiteNative)">
+        <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      </ProjectReference>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PostTrickNugetProjectRestoreGraph"
+          AfterTargets="_GenerateProjectRestoreGraphPerFramework">
+    <ItemGroup>
+      <ProjectReference Update="@(ThermiteNative)">
+        <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      </ProjectReference>
+    </ItemGroup>
+  </Target>
+
   <Target Name="GenerateInternalsVisibleTo"
           BeforeTargets="CoreCompile"
           DependsOnTargets="PrepareForBuild;CoreGenerateInternalsVisibleTo"

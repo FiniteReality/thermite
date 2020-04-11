@@ -1,30 +1,25 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-
   <PropertyGroup>
-    <TargetRuntime>Native</TargetRuntime>
-    <TargetFramework>netstandard</TargetFramework>
+    <TargetType Condition="'$(TargetType)'==''">library</TargetType>
+    <IgnoreDefaultIncludeGroups Condition="'$(IgnoreDefaultIncludeGroups)'==''">false</IgnoreDefaultIncludeGroups>
+    <Compiler Condition="'$(Compiler)'==''">g++</Compiler>
+  </PropertyGroup>
 
-    <TargetType Condition="'$(TargetType)'==''">exe</TargetType>
-
-    <BaseOutputPath Condition="'$(BaseOutputPath)' == ''">bin\</BaseOutputPath>
-    <BaseOutputPath Condition="!HasTrailingSlash('$(BaseOutputPath)')">$(BaseOutputPath)\</BaseOutputPath>
-    <OutputPath Condition="'$(OutputPath)' == '' and '$(PlatformName)' == 'AnyCPU'">$(BaseOutputPath)$(Configuration)\</OutputPath>
-    <OutputPath Condition="'$(OutputPath)' == '' and '$(PlatformName)' != 'AnyCPU'">$(BaseOutputPath)$(PlatformName)\$(Configuration)\</OutputPath>
-
-    <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)' == ''">obj\</BaseIntermediateOutputPath>
-    <BaseIntermediateOutputPath Condition="!HasTrailingSlash('$(BaseIntermediateOutputPath)')">$(BaseIntermediateOutputPath)\</BaseIntermediateOutputPath>
-    <IntermediateOutputPath Condition=" $(IntermediateOutputPath) == '' and '$(PlatformName)' == 'AnyCPU' ">$(BaseIntermediateOutputPath)$(Configuration)\</IntermediateOutputPath>
-    <IntermediateOutputPath Condition=" $(IntermediateOutputPath) == '' and '$(PlatformName)' != 'AnyCPU' ">$(BaseIntermediateOutputPath)$(PlatformName)\$(Configuration)\</IntermediateOutputPath>
-    <IntermediateOutputPath Condition="!HasTrailingSlash('$(IntermediateOutputPath)')">$(IntermediateOutputPath)\</IntermediateOutputPath>
+  <PropertyGroup Condition=" '$(Version)' == '' ">
+    <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.0</VersionPrefix>
+    <Version Condition=" '$(VersionSuffix)' != '' ">$(VersionPrefix)-$(VersionSuffix)</Version>
+    <Version Condition=" '$(Version)' == '' ">$(VersionPrefix)</Version>
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageOutputPath Condition="'$(PackageOutputPath)' == ''">$(OutputPath)</PackageOutputPath>
+    <Authors Condition=" '$(Authors)'=='' ">$(AssemblyName)</Authors>
+    <Company Condition=" '$(Company)'=='' ">$(Authors)</Company>
+    <AssemblyTitle Condition=" '$(AssemblyTitle)' == '' ">$(AssemblyName)</AssemblyTitle>
+    <Product Condition=" '$(Product)' == ''">$(AssemblyName)</Product>
   </PropertyGroup>
 
-  <!-- OS definitions -->
+
   <PropertyGroup Condition="'$(OS)'=='Windows_NT'">
     <CompilerIntermediateExt Condition="'$(CompilerIntermediateExt)'==''">.obj</CompilerIntermediateExt>
   </PropertyGroup>
@@ -32,54 +27,74 @@
   <PropertyGroup Condition="'$(OS)'=='Unix'">
     <CompilerIntermediateExt Condition="'$(CompilerIntermediateExt)'==''">.o</CompilerIntermediateExt>
     <!-- TODO: MSBuild internally overwrites this with `.exe` - there seems to be no way to fix this. -->
-    <TargetExt Condition="'$(TargetType)'=='exe'"></TargetExt>
+    <TargetExt Condition="'$(TargetType)'=='exe'"> </TargetExt>
     <TargetExt Condition="'$(TargetType)'=='library'">.so</TargetExt>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(OS)'=='OSX'">
     <CompilerIntermediateExt Condition="'$(CompilerIntermediateExt)'==''">.o</CompilerIntermediateExt>
     <!-- TODO: MSBuild internally overwrites this with `.exe` - there seems to be no way to fix this. -->
-    <TargetExt Condition="'$(TargetType)'=='exe'"></TargetExt>
+    <TargetExt Condition="'$(TargetType)'=='exe'"> </TargetExt>
     <TargetExt Condition="'$(TargetType)'=='library'">.dylib</TargetExt>
   </PropertyGroup>
 
-  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
-
   <PropertyGroup>
-    <DefaultProjectTypeGuid>{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}</DefaultProjectTypeGuid>
+    <!-- Force ProduceReferenceAssembly to be false even if a Common.trops or Common.targets overrode it -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  </PropertyGroup>
 
-    <IgnoreDefaultIncludeGroups Condition="'$(IgnoreDefaultIncludeGroups)'==''">false</IgnoreDefaultIncludeGroups>
-
-    <Compiler Condition="'$(Compiler)'==''">g++</Compiler>
-
-    <!-- TODO: These should be detected based on the compiler. -->
+  <!-- TODO: These should be detected based on the compiler. -->
+  <PropertyGroup Condition="'$(CompilerOptions)'!=''">
     <CompilerOptions Condition="'$(Platform)'=='x86'">-m32 $(CompilerOptions)</CompilerOptions>
     <CompilerOptions Condition="'$(Platform)'=='x64'">-m64 $(CompilerOptions)</CompilerOptions>
-    <!-- TODO: this should detect current architecture -->
-    <CompilerOptions Condition="'$(Platform)'=='AnyCPU'">-m64 $(CompilerOptions)</CompilerOptions>
-    <LinkerOptions Condition="'$(TargetType)'=='library'">-shared $(LinkerOptions)</LinkerOptions>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CompilerOptions)'==''">
+    <CompilerOptions Condition="'$(Platform)'=='x86'">-m32</CompilerOptions>
+    <CompilerOptions Condition="'$(Platform)'=='x64'">-m64</CompilerOptions>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(LinkerOptions)'!=''">
+    <LinkerOptions Condition="'$(Platform)'=='x86'">-m32 $(LinkerOptions)</LinkerOptions>
+    <LinkerOptions Condition="'$(Platform)'=='x64'">-m64 $(LinkerOptions)</LinkerOptions>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(LinkerOptions)'==''">
+    <CompilerOptions Condition="'$(Platform)'=='x86'">-m32</CompilerOptions>
+    <CompilerOptions Condition="'$(Platform)'=='x64'">-m64</CompilerOptions>
+  </PropertyGroup>
 
-    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  <PropertyGroup>
+    <LinkerOptions Condition="'$(TargetType)'=='library'">$(LinkerOptions) -shared</LinkerOptions>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(LinkerOptions)'==''">
+    <LinkerOptions Condition="'$(TargetType)'=='library'">-shared</LinkerOptions>
   </PropertyGroup>
 
   <!-- Group definitions -->
   <ItemGroup Condition="'$(IgnoreDefaultIncludeGroups)'=='false'">
-      <Compile Include="**/*.cpp;**/*.cxx;**/*.cc;**/*.c++;**/*.c" />
-      <Clean Include="$(IntermediateOutputPath)*.cpp$(CompilerIntermediateExt);$(IntermediateOutputPath)*.cxx$(CompilerIntermediateExt);$(IntermediateOutputPath)*.cc$(CompilerIntermediateExt);$(IntermediateOutputPath)*.c++$(CompilerIntermediateExt);$(IntermediateOutputPath)*.c$(CompilerIntermediateExt)" />
+      <Compile Include="**/*.cpp;**/*.cxx;**/*.cc;**/*.c++;**/*.c">
+        <_LinkOutputName>$(IntermediateOutputPath)%(Identity)$(CompilerIntermediateExt)</_LinkOutputName>
+      </Compile>
+      <Link Include="@(Compile->'%(_LinkOutputName)')" />
+      <Clean Include="@(Link)" />
+      <Clean Include="$(IntermediateOutputPath)$(AssemblyName)$(TargetExt)" />
   </ItemGroup>
 
-  <Target Name="CoreCompileIntermediate" Inputs="@(Compile)" Outputs="@(Compile->'$(IntermediateOutputPath)%(Identity)$(CompilerIntermediateExt)')">
-    <Exec Command="$(Compiler) $(CompilerOptions) -c %(Compile.Identity) -o $(IntermediateOutputPath)%(Compile.Identity)$(CompilerIntermediateExt)" />
-    <Message Text="%(Compile.Identity) -> %(Compile.Identity)$(CompilerIntermediateExt)" />
+  <Import Project="$(MSBuildToolsPath)/Sdks/NuGet.Build.Tasks.Pack/build/NuGet.Build.Tasks.Pack.targets" Condition="Exists('$(MSBuildToolsPath)/Sdks/NuGet.Build.Tasks.Pack/build/NuGet.Build.Tasks.Pack.targets')" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+
+  <Target Name="CoreCompile" Inputs="@(Compile)" Outputs="@(Link)">
+    <Exec Command="$(Compiler) $(CompilerOptions) -c %(Compile.Identity) -o %(Compile._LinkOutputName)" />
+    <Message Importance="High" Text="%(Compile.Identity) -> %(Compile._LinkOutputName)" />
   </Target>
 
-  <Target Name="CoreCompile" DependsOnTargets="CoreCompileIntermediate" Inputs="@(Compile->'$(IntermediateOutputPath)%(Identity)$(CompilerIntermediateExt)')" Outputs="$(IntermediateOutputPath)$(AssemblyName)$(TargetExt)">
+  <Target Name="CoreLink" AfterTargets="CoreCompile" Inputs="@(Link)" Outputs="$(IntermediateOutputPath)$(AssemblyName)$(TargetExt)">
     <PropertyGroup>
-      <InputFiles>@(Compile->'$(IntermediateOutputPath)%(Identity)$(CompilerIntermediateExt)', ' ')</InputFiles>
+      <InputFiles>@(Link, ' ')</InputFiles>
     </PropertyGroup>
-    <Exec Command="$(Compiler) $(CompilerOptions) $(LinkerOptions) @(Reference->'-l$(Identity)') $(InputFiles) -o $(IntermediateOutputPath)$(AssemblyName)$(TargetExt)" />
+    <Exec Command="$(Compiler) $(LinkerOptions) $(InputFiles) -o $(IntermediateOutputPath)$(AssemblyName)$(TargetExt)" />
   </Target>
 
   <!-- Targets needed to integrate nicely... -->
   <Target Name="CreateManifestResourceNames" />
+
 </Project>

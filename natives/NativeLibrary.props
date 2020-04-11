@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <DefaultProjectTypeGuid>{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}</DefaultProjectTypeGuid>
+
+    <TargetRuntime>Native</TargetRuntime>
+    <TargetFramework>netstandard1.0</TargetFramework>
+
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>.so; .dylib</AllowedOutputExtensionsInPackageBuildOutputFolder>
+
+    <!--<NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>-->
+
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+
+  <PropertyGroup>
+    <BaseOutputPath Condition="'$(BaseOutputPath)' == ''">bin\</BaseOutputPath>
+    <BaseOutputPath Condition="!HasTrailingSlash('$(BaseOutputPath)')">$(BaseOutputPath)\</BaseOutputPath>
+    <OutputPath Condition="'$(OutputPath)' == '' and '$(Platform)' == 'AnyCPU'">$(BaseOutputPath)$(Configuration)\</OutputPath>
+    <OutputPath Condition="'$(OutputPath)' == '' and '$(Platform)' != 'AnyCPU'">$(BaseOutputPath)$(PlatformName)\$(Configuration)\</OutputPath>
+
+    <PackageOutputPath Condition="'$(PackageOutputPath)' == ''">$(OutputPath)</PackageOutputPath>
+  </PropertyGroup>
+
+</Project>

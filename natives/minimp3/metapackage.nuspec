@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
+  <metadata minClientVersion="4.3">
+    <id>runtime.native.Thermite.Natives.minimp3</id>
+    <version>$Version$</version>
+    <authors>$Authors$</authors>
+    <owners>$Authors$</owners>
+    <requireLicenseAcceptance>$RequireLicenseAcceptance$</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <projectUrl>$ProjectUrl$</projectUrl>
+    <description>$Description$</description>
+    <copyright>$Copyright$</copyright>
+    <repository type="git" url="$ProjectUrl$" />
+    <dependencies>
+      <group targetFramework=".NETStandard1.0">
+        <!-- N.B. keep this updated with .github/workflows/publish.yml -->
+        <dependency id="runtime.win-x64.Thermite.Natives.minimp3" version="$Version$" />
+        <dependency id="runtime.osx.10.15-x64.Thermite.Natives.minimp3" version="$Version$" />
+        <dependency id="runtime.ubuntu.16.04-x64.Thermite.Natives.minimp3" version="$Version$" />
+        <dependency id="runtime.ubuntu.18.04-x64.Thermite.Natives.minimp3" version="$Version$" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="$PlaceholderFile$" target="lib/netstandard1.0/_._" />
+  </files>
+</package>

@@ -19,11 +19,27 @@
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets" />
 
   <PropertyGroup>
-    <GeneratedInternalsVisibleToFile Condition="'$(GeneratedInternalsVisibleToFile)' == ''">$(IntermediateOutputPath)$(MSBuildProjectName).InternalsVisibleTo$(DefaultLanguageSourceExtension)</GeneratedInternalsVisibleToFile>
+    <PackageId Condition="'$(RuntimeId)' == ''">runtime.native.Thermite.Natives.$(AssemblyName)</PackageId>
+    <PackageId Condition="'$(RuntimeId)' != ''">runtime.$(RuntimeId).Thermite.Natives.$(AssemblyName)</PackageId>
   </PropertyGroup>
 
-  <!-- Empty target so that `dotnet test` will work on the solution -->
-  <!-- https://github.com/Microsoft/vstest/issues/411 -->
-  <Target Name="VSTest" />
+  <PropertyGroup Condition="'$(CI)' != '' AND '$(RuntimeId)' == ''">
+    <NuspecFile>metapackage.nuspec</NuspecFile>
+    <NoBuild>true</NoBuild>
+    <!--<IncludeBuildOutput>false</IncludeBuildOutput>-->
+    <NuspecProperties>
+        Version=$(PackageVersion);
+        Authors=$(Authors);
+        RequireLicenseAcceptance=$(PackageRequireLicenseAcceptance);
+        ProjectUrl=$(PackageProjectUrl);
+        Description=$(PackageDescription);
+        Copyright=$(Copyright);
+        PlaceholderFile=$(IntermediateOutputPath)_._;
+      </NuspecProperties>
+  </PropertyGroup>
+
+  <Target Name="GeneratePlaceholderFiles" BeforeTargets="GenerateNuspec" Condition="'$(CI)' != '' AND '$(RuntimeId)' == ''">
+    <Touch Files="$(IntermediateOutputPath)_._" AlwaysCreate="true" />
+  </Target>
 
 </Project>

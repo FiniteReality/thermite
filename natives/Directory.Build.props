@@ -13,7 +13,6 @@
   -->
 
   <PropertyGroup>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileDirectory)..\Directory.Build.props</MSBuildAllProjects>
     <ThermiteProjectCategory>natives</ThermiteProjectCategory>
   </PropertyGroup>
