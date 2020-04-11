@@ -278,6 +278,7 @@ namespace Thermite.Discord
         private async Task<bool> PerformDiscoveryAndSelectProtocolAsync(
             Utf8JsonWriter writer, VoiceGatewayReady ready)
         {
+            Debug.Assert(EndPoint != null);
 
             var bytesSent = await _discoverySocket.SendToAsync(
                 DiscoveryPacket, SocketFlags.None, EndPoint);

@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text;
 
@@ -8,7 +9,8 @@ namespace Thermite.Internal
     internal static class IPUtility
     {
         public static bool TryParseAddress(ReadOnlySequence<byte> sequence,
-            out IPAddress address)
+            [NotNullWhen(true)]
+            out IPAddress? address)
         {
             if (!sequence.IsSingleSegment)
                 return SlowPath(sequence, out address);
@@ -16,7 +18,8 @@ namespace Thermite.Internal
             return TryParseAddress(sequence.FirstSpan, out address);
 
             static bool SlowPath(ReadOnlySequence<byte> sequence,
-                out IPAddress address)
+                [NotNullWhen(true)]
+                out IPAddress? address)
             {
                 Span<byte> buffer = stackalloc byte[(int)sequence.Length];
                 sequence.CopyTo(buffer);
@@ -26,7 +29,8 @@ namespace Thermite.Internal
         }
 
         public static bool TryParseAddress(ReadOnlySpan<byte> buffer,
-            out IPAddress address)
+            [NotNullWhen(true)]
+            out IPAddress? address)
         {
             address = default!;
 
