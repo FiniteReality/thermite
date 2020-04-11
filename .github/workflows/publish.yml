@@ -54,6 +54,7 @@ jobs:
 
       - name: Upload NuGet packages
         run: dotnet nuget push artifacts/pkg/Release/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
+        shell: bash
 
   build:
     runs-on: [ubuntu-latest]
@@ -85,3 +86,4 @@ jobs:
 
       - name: Upload NuGet packages
         run: dotnet nuget push artifacts/pkg/Release/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
+        shell: bash
