@@ -53,7 +53,7 @@ jobs:
           path: ${{ github.workspace }}/artifacts/pkg/Release/
 
       - name: Upload NuGet packages
-        run: dotnet nuget push pkg/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
+        run: dotnet nuget push artifacts/pkg/Release/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
 
   build:
     runs-on: [ubuntu-latest]
@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v1.0.0
         with:
           name: nupkgs
-          path: ${{ github.workspace }}/artifacts/pkg/
+          path: ${{ github.workspace }}/artifacts/pkg/Release/
 
       - name: Upload NuGet packages
-        run: dotnet nuget push pkg/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
+        run: dotnet nuget push artifacts/pkg/Release/*.nupkg -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"
