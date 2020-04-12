@@ -10,6 +10,87 @@ env:
   CI: true
 
 jobs:
+  build-natives:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-16.04, ubuntu-18.04]
+        arch: [x64, x86]
+
+        include:
+          - os: windows-latest
+            arch: x64
+            rid: win-x64
+          - os: macos-latest
+            arch: x64
+            rid: osx.10.15-x64
+          - os: ubuntu-16.04
+            arch: x64
+            rid: ubuntu.16.04-x64
+          - os: ubuntu-18.04
+            arch: x64
+            rid: ubuntu.18.04-x64
+
+          - os: windows-latest
+            arch: x86
+            rid: win-x86
+          - os: macos-latest
+            arch: x86
+            rid: osx.10.15-x86
+          - os: ubuntu-16.04
+            arch: x86
+            rid: ubuntu.16.04-x86
+          - os: ubuntu-18.04
+            arch: x86
+            rid: ubuntu.18.04-x86
+
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.100-preview.2.20176.6
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Build Thermite
+        run: dotnet build tools/Thermite.Natives.sln --no-restore --configuration Release -p:Platform="${{ matrix.arch }}" -p:RuntimeId="${{ matrix.rid }}"
+
+#     - name: Run Unit Tests
+#       run: dotnet test  tools/Thermite.Natives.sln --no-build --configuration Release -p:Platform="${{ matrix.arch }}" -p:RuntimeId="${{ matrix.rid }}"
+
+      - name: Pack Thermite
+        run: dotnet pack tools/Thermite.Natives.sln --no-build --configuration Release -p:Platform="${{ matrix.arch }}" -p:RuntimeId="${{ matrix.rid }}"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          name: natives
+          path: ${{ github.workspace }}/artifacts/pkg/Release/
+
+      - name: Upload NuGet packages
+        run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
+        shell: bash
+
+  build-metapackage:
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.100-preview.2.20176.6
+
+      - name: Build natives metapackages
+        run: dotnet pack tools/Thermite.Natives.sln --no-build --configuration Release -p:BuildMetapackage=true
+
+      - name: Upload NuGet packages
+        run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
+        shell: bash
+
   build:
     runs-on: [ubuntu-latest]
 
