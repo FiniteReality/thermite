@@ -201,15 +201,6 @@ namespace Thermite.Transcoders.Pcm
 
                     return result.As<byte, T>().AsVector();
                 }
-                else if (Sse2.IsSupported)
-                {
-                    var result = Vector256.Create(
-                        ReverseEndiannessSse2(vector.GetLower()).AsByte(),
-                        ReverseEndiannessSse2(vector.GetUpper()).AsByte()
-                    );
-
-                    return result.As<byte, T>().AsVector();
-                }
                 else
                 {
                     Debug.Fail("SSE2 not supported");
