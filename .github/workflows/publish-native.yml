@@ -74,3 +74,19 @@ jobs:
       - name: Upload NuGet packages
         run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
         shell: bash
+
+  build-metapackage:
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.100-preview.2.20176.6
+
+      - name: Build natives metapackages
+        run: dotnet pack tools/Thermite.Natives.sln --no-build --configuration Release -p:BuildMetapackage=true
+
+      - name: Upload NuGet packages
+        run: for pkg in artifacts/pkg/Release/*.nupkg; do dotnet nuget push "$pkg" -k "${{ secrets.MyGet }}" -s "${{ env.MYGET_FEED }}"; done
+        shell: bash

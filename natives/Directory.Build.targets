@@ -19,14 +19,14 @@
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets" />
 
   <PropertyGroup>
+    <IsPackable Condition="'$(IgnoreNative)' == 'true'">false</IsPackable>
     <PackageId Condition="'$(RuntimeId)' == ''">runtime.native.Thermite.Natives.$(AssemblyName)</PackageId>
     <PackageId Condition="'$(RuntimeId)' != ''">runtime.$(RuntimeId).Thermite.Natives.$(AssemblyName)</PackageId>
-    <BuildOutputTargetFolder Condition="'$(RuntimeId)' != ''">runtimes/$(RuntimeId)</BuildOutputTargetFolder>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetNativeBuildOutputsForPack</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(CI)' != '' AND '$(RuntimeId)' == ''">
+  <PropertyGroup Condition="'$(BuildMetapackage)' == 'true'">
     <NuspecFile>metapackage.nuspec</NuspecFile>
     <NoBuild>true</NoBuild>
     <NuspecProperties>
@@ -44,13 +44,14 @@
     <Touch Files="$(IntermediateOutputPath)_._" AlwaysCreate="true" />
   </Target>
 
-  <Target Name="GetNativeBuildOutputsForPack" Condition="'$(RuntimeId)' != ''">
+  <Target Name="GetNativeBuildOutputsForPack">
     <ItemGroup>
       <TfmSpecificPackageFile Include="$(IntermediateOutputPath)$(AssemblyName)$(TargetExt)">
-        <PackagePath>runtimes/$(RuntimeId)/native</PackagePath>
+        <PackagePath Condition="'$(RuntimeId)' != ''">runtimes/$(RuntimeId)/native</PackagePath>
+        <PackagePath Condition="'$(RuntimeId)' == ''">lib/$(TargetFramework)</PackagePath>
       </TfmSpecificPackageFile>
 
-      <TfmSpecificPackageFile Include="$(IntermediateOutputPath)_._">
+      <TfmSpecificPackageFile Include="$(IntermediateOutputPath)_._" Condition="'$(RuntimeId)' != ''">
         <PackagePath>lib/$(TargetFramework)</PackagePath>
       </TfmSpecificPackageFile>
     </ItemGroup>
