@@ -4,7 +4,6 @@
 
   <PropertyGroup>
     <VersionPrefix>1.0.0</VersionPrefix>
-    <VersionSuffix></VersionSuffix>
 
     <Compiler Condition="'$(OS)' != 'Windows_NT'">clang</Compiler>
     <Compiler Condition="'$(OS)' == 'Windows_NT'">gcc</Compiler>
