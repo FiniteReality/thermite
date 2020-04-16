@@ -1,3 +1,4 @@
+using System.Composition;
 using System.IO.Pipelines;
 using Thermite.Decoders.Mpeg;
 
@@ -7,6 +8,7 @@ namespace Thermite.Decoders
     /// A decoder factory for decoding MPEG 1, 2 and 3 files to their
     /// underlying sample data.
     /// </summary>
+    [Export(typeof(IAudioDecoderFactory))]
     public sealed class MpegAudioDecoderFactory : IAudioDecoderFactory
     {
         /// <inheritdoc/>

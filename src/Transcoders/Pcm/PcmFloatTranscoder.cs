@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
 
-using static Thermite.Internal.FrameParsingUtilities;
+using static Thermite.Utilities.FrameParsingUtilities;
 
 namespace Thermite.Transcoders.Pcm
 {

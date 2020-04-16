@@ -4,97 +4,117 @@ using System.Diagnostics;
 
 namespace Thermite.Utilities
 {
-    internal static class TextParsingUtilities
+    /// <summary>
+    /// Provides a set of methods for parsing structured UTF-8 plaintext.
+    /// </summary>
+    public static class TextParsingUtilities
     {
+        /// <summary>
+        /// Attempts to read a given <see cref="ReadOnlySequence{T}"/> until
+        /// the specified separator is encountered, or until the end of the
+        /// sequence.
+        /// </summary>
+        /// <remarks>
+        /// The <paramref name="sequence"/> parameter is updated to point at
+        /// the first byte after <paramref name="separator"/>, so that this
+        /// method can be called as the condition of a while loop.
+        /// </remarks>
+        /// <param name="sequence">
+        /// The <see cref="ReadOnlySequence{T}"/> to read from.
+        /// </param>
+        /// <param name="separator">
+        /// The separator to look for in <paramref name="sequence"/>.
+        /// </param>
+        /// <param name="skipped">
+        /// The bytes skipped to encounter <paramref name="separator"/>, not
+        /// including the separator itself.
+        /// </param>
+        /// <returns>
+        /// Returns <code>true</code> when <paramref name="separator"/> or the
+        /// end of the sequence was encountered, and <code>false</code>
+        /// otherwise.
+        /// </returns>
         [DebuggerStepThrough]
-        public static bool TryGetKeyValuePair(
-            ref ReadOnlySequence<byte> sequence,
-            out ReadOnlySequence<byte> key, out ReadOnlySequence<byte> value)
+        public static bool TryReadTo(ref ReadOnlySequence<byte> sequence,
+            byte separator, out ReadOnlySequence<byte> skipped)
         {
             if (sequence.IsEmpty)
             {
-                key = default;
-                value = default;
-                return false;
-            }
-
-            value = default;
-
-            if (TryReadTo(ref sequence, (byte)'=', out key) &&
-                TryReadTo(ref sequence, (byte)'&', out value))
-                return true;
-
-            return false;
-        }
-
-        [DebuggerStepThrough]
-        public static bool TryGetKeyValuePair(ref ReadOnlySpan<byte> input,
-            out ReadOnlySpan<byte> key, out ReadOnlySpan<byte> value)
-        {
-            if (input.IsEmpty)
-            {
-                key = default;
-                value = default;
-                return false;
-            }
-
-            value = default;
-
-            if (TryReadTo(ref input, (byte)'=', out key) &&
-                TryReadTo(ref input, (byte)'&', out value))
-                return true;
-
-            return false;
-        }
-
-        [DebuggerStepThrough]
-        public static bool TryReadTo(ref ReadOnlySequence<byte> input,
-            byte separator, out ReadOnlySequence<byte> skipped)
-        {
-            if (input.IsEmpty)
-            {
                 skipped = default;
                 return false;
             }
 
-            var position = input.PositionOf(separator);
+            var position = sequence.PositionOf(separator);
 
             if (position == null)
             {
-                skipped = input;
-                input = ReadOnlySequence<byte>.Empty;
+                skipped = sequence;
+                sequence = ReadOnlySequence<byte>.Empty;
                 return true;
             }
 
-            skipped = input.Slice(input.Start, position.Value);
-            input = input.Slice(input.GetPosition(1, position.Value));
+            skipped = sequence.Slice(sequence.Start, position.Value);
+            sequence = sequence.Slice(sequence.GetPosition(1, position.Value));
             return true;
         }
 
+
+        /// <summary>
+        /// Attempts to read a given <see cref="ReadOnlySpan{T}"/> until the
+        /// specified separator is encountered, or until the end of the span.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The <paramref name="span"/> parameter is updated to point at the
+        /// first byte after <paramref name="separator"/>, so that this method
+        /// can be called as the condition of a while loop.
+        /// </para>
+        /// </remarks>
+        /// <param name="span">
+        /// The <see cref="ReadOnlySpan{T}"/> to read from.
+        /// </param>
+        /// <param name="separator">
+        /// The separator to look for in <paramref name="span"/>.
+        /// </param>
+        /// <param name="skipped">
+        /// The bytes skipped to encounter <paramref name="separator"/>, not
+        /// including the separator itself.
+        /// </param>
+        /// <returns>
+        /// Returns <code>true</code> when <paramref name="separator"/> or the
+        /// end of the span was encountered, and <code>false</code> otherwise.
+        /// </returns>
         [DebuggerStepThrough]
-        public static bool TryReadTo(ref ReadOnlySpan<byte> input,
+        public static bool TryReadTo(ref ReadOnlySpan<byte> span,
             byte separator, out ReadOnlySpan<byte> skipped)
         {
-            if (input.IsEmpty)
+            if (span.IsEmpty)
             {
                 skipped = default;
                 return false;
             }
 
-            var position = input.IndexOf(separator);
+            var position = span.IndexOf(separator);
 
             if (position < 0)
             {
-                skipped = input;
-                input = ReadOnlySpan<byte>.Empty;
+                skipped = span;
+                span = ReadOnlySpan<byte>.Empty;
                 return true;
             }
 
-            skipped = input.Slice(0, position);
-            input = input.Slice(position + 1);
+            skipped = span.Slice(0, position);
+            span = span.Slice(position + 1);
             return true;
         }
 
+        /// <summary>
+        /// Checks for equality between a <see cref="ReadOnlySequence{T}"/> and
+        /// a <see cref="ReadOnlySpan{T}"/>
+        /// </summary>
+        /// <param name="first"></param>
+        /// <param name="second"></param>
+        /// <returns></returns>
         [DebuggerStepThrough]
         public static bool SequenceEqual(ReadOnlySequence<byte> first,
             ReadOnlySpan<byte> second)
@@ -112,94 +132,6 @@ namespace Thermite.Utilities
             first.CopyTo(buffer);
 
             return buffer.SequenceEqual(second);
-        }
-
-        public static bool TryUrlDecode(ReadOnlySpan<byte> source,
-            Span<byte> destination, out int decodedBytes)
-        {
-            decodedBytes = default;
-            if (destination.Length < source.Length)
-                return false;
-
-            if (!source.TryCopyTo(destination))
-                return false;
-
-            return TryUrlDecode(
-                destination.Slice(0, source.Length),
-                out decodedBytes);
-        }
-
-        public static bool TryUrlDecode(Span<byte> buffer,
-            out int decodedBytes)
-        {
-            int readHead = 0, writeHead = 0;
-
-            while (readHead < buffer.Length)
-            {
-                switch (buffer[readHead])
-                {
-                    case (byte)'+':
-                        buffer[writeHead++] = (byte)' ';
-                        break;
-                    case (byte)'%':
-                        if (!TryPercentDecodeUtf8(buffer,
-                            ref readHead, ref writeHead))
-                            buffer[writeHead++] = (byte)'%';
-                        readHead -= 1;
-                        break;
-                    default:
-                        buffer[writeHead++] = buffer[readHead];
-                        break;
-                }
-
-                readHead++;
-            }
-
-            decodedBytes = writeHead;
-            return true;
-
-            static bool TryPercentDecodeUtf8(Span<byte> buffer,
-                ref int readHead, ref int writeHead)
-            {
-                while (readHead < buffer.Length
-                    && buffer[readHead] == (byte)'%')
-                {
-                    if (!TryHexDecode(buffer.Slice(readHead + 1, 2),
-                        out var decodedByte))
-                        return false;
-
-                    buffer[writeHead++] = decodedByte;
-                    readHead += 3;
-                }
-
-                return true;
-            }
-
-            static bool TryHexDecode(Span<byte> buffer, out byte hexByte)
-            {
-                hexByte = 0;
-
-                for (int i = 0; i < 2; i++)
-                {
-                    var shift = (1 - i) * 4;
-
-                    if (buffer[i] >= (byte)'0' && buffer[i] <= (byte)'9')
-                        hexByte |= (byte)((buffer[i] - (byte)'0') << shift);
-
-                    else if (buffer[i] >= (byte)'A' && buffer[i] <= (byte)'F')
-                        hexByte |= (byte)(
-                            (buffer[i] - (byte)'A' + 0xA) << shift);
-
-                    else if (buffer[i] >= (byte)'a' && buffer[i] <= (byte)'f')
-                        hexByte |= (byte)(
-                            (buffer[i] - (byte)'a' + 0xA) << shift);
-
-                    else
-                        return false;
-                }
-
-                return true;
-            }
         }
     }
 }

@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-using static Thermite.Utilities.State;
+using static TerraFX.Utilities.State;
 using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Discord
@@ -58,7 +58,7 @@ namespace Thermite.Discord
 
         public void Stop()
         {
-            _state.ThrowIfDisposed(nameof(VoiceGatewayClient));
+            _state.ThrowIfDisposedOrDisposing();
 
             if (_state > Initialized)
             {

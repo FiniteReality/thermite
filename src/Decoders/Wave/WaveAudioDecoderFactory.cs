@@ -1,3 +1,4 @@
+using System.Composition;
 using System.IO.Pipelines;
 using Thermite.Decoders.Wave;
 
@@ -7,6 +8,7 @@ namespace Thermite.Decoders
     /// A decoder factory for decoding RIFF WAVE files to their underlying
     /// sample data.
     /// </summary>
+    [Export(typeof(IAudioDecoderFactory))]
     public sealed class WaveAudioDecoderFactory : IAudioDecoderFactory
     {
         /// <inheritdoc/>

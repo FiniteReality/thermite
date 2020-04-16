@@ -6,10 +6,11 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using TerraFX.Utilities;
 using Thermite.Discord;
 using Thermite.Utilities;
 
-using static Thermite.Utilities.State;
+using static TerraFX.Utilities.State;
 using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Internal
@@ -102,7 +103,7 @@ namespace Thermite.Internal
 
         public void Start()
         {
-            _state.ThrowIfDisposed(nameof(Player));
+            _state.ThrowIfDisposedOrDisposing();
 
             if (_state.TryTransition(from: Initialized, to: Started)
                 != Initialized)
@@ -117,7 +118,7 @@ namespace Thermite.Internal
 
         public async Task StopAsync()
         {
-            _state.ThrowIfDisposed(nameof(Player));
+            _state.ThrowIfDisposedOrDisposing();
 
             if (_state != Started)
                 ThrowInvalidOperationException("Cannot stop when not started");

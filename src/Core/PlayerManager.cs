@@ -8,10 +8,11 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using TerraFX.Utilities;
 using Thermite.Discord;
-using Thermite.Utilities;
+using Thermite.Internal;
 
-using static Thermite.Utilities.State;
+using static TerraFX.Utilities.State;
 using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite

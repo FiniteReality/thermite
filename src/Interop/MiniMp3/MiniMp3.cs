@@ -1,43 +1,9 @@
 using System.Runtime.InteropServices;
 using Thermite.Utilities;
 
-namespace Thermite.Natives
+namespace Thermite.Interop
 {
-    internal partial struct mp3dec_frame_info_t
-    {
-        public int frame_bytes;
-
-        public int frame_offset;
-
-        public int channels;
-
-        public int hz;
-
-        public int layer;
-
-        public int bitrate_kbps;
-    }
-
-    internal unsafe partial struct mp3dec_t
-    {
-        [NativeTypeName("float [2][288]")]
-        public fixed float mdct_overlap[2 * 288];
-
-        [NativeTypeName("float [960]")]
-        public fixed float qmf_state[960];
-
-        public int reserv;
-
-        public int free_format_bytes;
-
-        [NativeTypeName("unsigned char [4]")]
-        public fixed byte header[4];
-
-        [NativeTypeName("unsigned char [511]")]
-        public fixed byte reserv_buf[511];
-    }
-
-    internal static unsafe partial class MiniMp3
+    public static unsafe partial class MiniMp3
     {
         private const string LibraryPath = "minimp3";
 

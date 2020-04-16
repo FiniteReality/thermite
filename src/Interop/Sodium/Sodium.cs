@@ -2,9 +2,9 @@ using System;
 using System.Runtime.InteropServices;
 using Thermite.Utilities;
 
-namespace Thermite.Natives
+namespace Thermite.Interop
 {
-    internal static unsafe partial class Sodium
+    public static unsafe partial class Sodium
     {
         private const string libraryPath = "sodium";
 

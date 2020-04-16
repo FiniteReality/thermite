@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Core/Thermite.csproj" />
+    <ProjectReference Include="../../Interop/Opus/Thermite.Interop.Opus.csproj" />
   </ItemGroup>
 
 </Project>

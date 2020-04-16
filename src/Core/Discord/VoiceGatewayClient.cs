@@ -9,10 +9,11 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using TerraFX.Utilities;
 using Thermite.Discord.Models;
 using Thermite.Utilities;
 
-using static Thermite.Utilities.State;
+using static TerraFX.Utilities.State;
 using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Discord

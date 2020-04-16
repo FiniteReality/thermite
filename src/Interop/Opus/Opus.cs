@@ -1,21 +1,9 @@
 using System.Runtime.InteropServices;
 using Thermite.Utilities;
 
-namespace Thermite.Natives
+namespace Thermite.Interop
 {
-    internal partial struct OpusEncoder
-    {
-    }
-
-    internal partial struct OpusDecoder
-    {
-    }
-
-    internal partial struct OpusRepacketizer
-    {
-    }
-
-    internal static unsafe partial class Opus
+    public static unsafe partial class Opus
     {
         private const string libraryPath = "opus";
 

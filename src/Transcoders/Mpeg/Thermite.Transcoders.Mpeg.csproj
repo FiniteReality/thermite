@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Core/Thermite.csproj" />
+    <ProjectReference Include="../../Interop/MiniMp3/Thermite.Interop.MiniMp3.csproj" />
   </ItemGroup>
 
 </Project>

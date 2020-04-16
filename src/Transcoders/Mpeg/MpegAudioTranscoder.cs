@@ -6,10 +6,10 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
-using Thermite.Natives;
+using Thermite.Interop;
 
-using static Thermite.Internal.FrameParsingUtilities;
-using static Thermite.Natives.MiniMp3;
+using static Thermite.Interop.MiniMp3;
+using static Thermite.Utilities.FrameParsingUtilities;
 
 namespace Thermite.Transcoders.Mpeg
 {

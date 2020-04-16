@@ -7,10 +7,10 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Thermite.Sources.YouTube;
 using Thermite.Internal;
+using Thermite.Sources.YouTube;
 
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Sources
 {

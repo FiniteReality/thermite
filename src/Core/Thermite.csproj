@@ -11,10 +11,13 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="System.Composition.AttributedModel" />
     <PackageReference Include="System.IO.Pipelines" />
+    <PackageReference Include="TerraFX.Utilities" />
   </ItemGroup>
 
   <ItemGroup>
-    <ThermiteNative Include="../../natives/minimp3/minimp3.cxxproj" />
+    <ProjectReference Include="../Interop/MiniMp3/Thermite.Interop.MiniMp3.csproj" />
+    <ProjectReference Include="../Interop/Opus/Thermite.Interop.Opus.csproj" />
+    <ProjectReference Include="../Interop/Sodium/Thermite.Interop.Sodium.csproj" />
   </ItemGroup>
 
 </Project>

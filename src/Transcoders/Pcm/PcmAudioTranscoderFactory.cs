@@ -3,7 +3,7 @@ using System.IO.Pipelines;
 using Thermite.Codecs;
 using Thermite.Transcoders.Pcm;
 
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Transcoders
 {

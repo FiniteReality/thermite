@@ -84,7 +84,7 @@
 
   <Target Name="CoreCompile" Inputs="@(Compile)" Outputs="@(Link)">
     <Exec Command="$(Compiler) $(CompilerOptions) -c %(Compile.Identity) -o %(Compile._LinkOutputName)" />
-    <Message Importance="High" Text="%(Compile.Identity) -> %(Compile._LinkOutputName)" />
+    <Message Text="%(Compile.Identity) -> %(Compile._LinkOutputName)" />
   </Target>
 
   <Target Name="CoreLink" AfterTargets="CoreCompile" Inputs="@(Link)" Outputs="$(IntermediateOutputPath)$(AssemblyName)$(TargetExt)">

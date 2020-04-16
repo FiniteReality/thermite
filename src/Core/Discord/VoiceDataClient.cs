@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 
 using static System.Buffers.Binary.BinaryPrimitives;
 using static Thermite.Utilities.FrameParsingUtilities;
-using static Thermite.Natives.Opus;
-using static Thermite.Natives.Sodium;
+using static Thermite.Interop.Opus;
+using static Thermite.Interop.Sodium;
 
 namespace Thermite.Discord
 {

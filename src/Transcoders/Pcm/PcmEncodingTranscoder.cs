@@ -6,11 +6,11 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
-using Thermite.Natives;
+using Thermite.Interop;
 
-using static Thermite.Internal.FrameParsingUtilities;
-using static Thermite.Natives.Opus;
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Interop.Opus;
+using static Thermite.Utilities.FrameParsingUtilities;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Transcoders.Pcm
 {

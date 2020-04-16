@@ -12,8 +12,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Codecs;
 
-using static Thermite.Internal.FrameParsingUtilities;
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Utilities.FrameParsingUtilities;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Transcoders.Pcm
 {

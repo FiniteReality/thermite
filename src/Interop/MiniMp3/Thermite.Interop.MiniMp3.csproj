@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+
+    <Description>MiniMP3 interop library for Thermite.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ThermiteNative Include="../../../natives/minimp3/minimp3.cxxproj" />
+  </ItemGroup>
+
+</Project>

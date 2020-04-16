@@ -1,3 +1,4 @@
+using System.Composition;
 using System.IO.Pipelines;
 using Thermite.Decoders.Matroska;
 
@@ -7,6 +8,7 @@ namespace Thermite.Decoders
     /// A decoder factory for decoding Matroska and WEBM files to their
     /// underlying frames.
     /// </summary>
+    [Export(typeof(IAudioDecoderFactory))]
     public sealed class MatroskaAudioDecoderFactory
         : IAudioDecoderFactory
     {
