@@ -1,3 +1,4 @@
+using System.Composition;
 using System.IO.Pipelines;
 using Thermite.Codecs;
 using Thermite.Transcoders.Mpeg;
@@ -9,6 +10,7 @@ namespace Thermite.Transcoders
     /// <summary>
     /// A transcoder factory used for creating MPEG audio transcoders.
     /// </summary>
+    [Export(typeof(IAudioTranscoderFactory))]
     public sealed class MpegAudioTranscoderFactory : IAudioTranscoderFactory
     {
         /// <inheritdoc/>

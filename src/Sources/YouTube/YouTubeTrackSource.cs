@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Composition;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -17,6 +18,7 @@ namespace Thermite.Sources
     /// <summary>
     /// A source for retrieving Youtube tracks from the internet
     /// </summary>
+    [Export(typeof(ITrackSource))]
     public sealed class YouTubeTrackSource : ITrackSource, IAsyncDisposable
     {
         private delegate (string? videoId, string? playlistId) VideoIdGetter(

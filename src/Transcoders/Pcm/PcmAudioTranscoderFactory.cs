@@ -1,3 +1,4 @@
+using System.Composition;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using Thermite.Codecs;
@@ -10,6 +11,7 @@ namespace Thermite.Transcoders
     /// <summary>
     /// A transcoder factory used for creating PCM transcoders.
     /// </summary>
+    [Export(typeof(IAudioTranscoderFactory))]
     public sealed class PcmAudioTranscoderFactory : IAudioTranscoderFactory
     {
         /// <inheritdoc/>
