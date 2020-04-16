@@ -2,7 +2,7 @@ using System;
 using System.Buffers;
 using System.Diagnostics;
 
-namespace Thermite.Internal
+namespace Thermite.Utilities
 {
     [DebuggerStepThrough]
     internal class ReadOnlySequenceBuilder<T> : IDisposable

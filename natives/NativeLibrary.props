@@ -11,7 +11,7 @@
 
     <AllowedOutputExtensionsInPackageBuildOutputFolder>.so; .dylib</AllowedOutputExtensionsInPackageBuildOutputFolder>
 
-    <!--<NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>-->
+    <Configurations>Debug;Release</Configurations>
 
   </PropertyGroup>
 

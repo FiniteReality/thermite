@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace Thermite.Internal
+namespace Thermite.Utilities
 {
     internal static class FrameParsingUtilities
     {

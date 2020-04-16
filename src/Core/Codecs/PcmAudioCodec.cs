@@ -1,4 +1,4 @@
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Codecs
 {

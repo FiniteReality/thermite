@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using static System.Buffers.Binary.BinaryPrimitives;
-using static Thermite.Internal.FrameParsingUtilities;
+using static Thermite.Utilities.FrameParsingUtilities;
 using static Thermite.Natives.Opus;
 using static Thermite.Natives.Sodium;
 

@@ -1,6 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
-using Thermite.Internal;
+using Thermite.Utilities;
 
 namespace Thermite.Natives
 {

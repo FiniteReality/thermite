@@ -10,10 +10,10 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Thermite.Discord.Models;
-using Thermite.Internal;
+using Thermite.Utilities;
 
-using static Thermite.Internal.State;
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Utilities.State;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Discord
 {
@@ -140,7 +140,7 @@ namespace Thermite.Discord
                     if (!Payload.TryReadReady(ref reader, out var ready))
                         return new ValueTask<bool>(false);
 
-                    if (!IPUtility.TryParseAddress(ready.SlicedIp, out var address))
+                    if (!IPUtilities.TryParseAddress(ready.SlicedIp, out var address))
                         return new ValueTask<bool>(false);
 
                     var remote = new IPEndPoint(address, ready.Port);
@@ -311,7 +311,7 @@ namespace Thermite.Discord
                     .TrimEnd((byte)0);
                 var portBuffer = buffer.Slice(buffer.Length - 2);
 
-                if (!IPUtility.TryParseAddress(addressBuffer, out var address))
+                if (!IPUtilities.TryParseAddress(addressBuffer, out var address))
                     return false;
 
                 if (!BinaryPrimitives.TryReadUInt16LittleEndian(portBuffer,

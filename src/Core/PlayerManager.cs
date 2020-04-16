@@ -9,10 +9,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Thermite.Discord;
-using Thermite.Internal;
+using Thermite.Utilities;
 
-using static Thermite.Internal.State;
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Utilities.State;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite
 {

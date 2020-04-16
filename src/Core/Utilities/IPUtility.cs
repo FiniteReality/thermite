@@ -4,9 +4,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text;
 
-namespace Thermite.Internal
+namespace Thermite.Utilities
 {
-    internal static class IPUtility
+    internal static class IPUtilities
     {
         public static bool TryParseAddress(ReadOnlySequence<byte> sequence,
             [NotNullWhen(true)]

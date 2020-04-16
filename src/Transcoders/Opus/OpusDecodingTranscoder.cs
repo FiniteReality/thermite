@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using Thermite.Codecs;
 using Thermite.Natives;
 
-using static Thermite.Internal.FrameParsingUtilities;
+using static Thermite.Utilities.FrameParsingUtilities;
 using static Thermite.Natives.Opus;
-using static Thermite.Internal.ThrowHelpers;
+using static Thermite.Utilities.ThrowHelpers;
 
 namespace Thermite.Transcoders.Opus
 {
