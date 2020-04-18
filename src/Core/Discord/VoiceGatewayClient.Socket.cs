@@ -179,9 +179,6 @@ namespace Thermite.Discord
                         // TODO: support multi-segment messages
                         if (message.IsSingleSegment)
                         {
-                            var text = System.Text.Encoding.UTF8.GetString(
-                                message.First.Span);
-
                             await _websocket.SendAsync(message.First,
                                 WebSocketMessageType.Text, true,
                                 cancellationToken);
