@@ -4,6 +4,9 @@ Thermite is still in intensive development, but contributions are welcome. If
 you'd like to test Thermite in a music bot of your own, check the usage notes
 at the end of this document.
 
+You can find in-dev packages at
+`https://www.myget.org/F/thermite/api/v3/index.json`.
+
 ## Dependencies ##
 
 - .NET Core 3.0
