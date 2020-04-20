@@ -15,6 +15,17 @@
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileDirectory)..\Directory.Build.props</MSBuildAllProjects>
     <ThermiteProjectCategory>natives</ThermiteProjectCategory>
+    <!-- TODO: keep this in sync with .github/workflows/publish.yml -->
+    <NativeRuntimeIds>
+      win-x64;
+      osx.10.15-x64;
+      ubuntu.18.04-x64;
+      linux-x64;
+      win-x86;
+      osx.10.15-x86;
+      ubuntu.18.04-x86;
+      linux-x86;
+    </NativeRuntimeIds>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props" />

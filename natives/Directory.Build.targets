@@ -20,8 +20,8 @@
 
   <PropertyGroup>
     <IsPackable Condition="'$(IgnoreNative)' == 'true'">false</IsPackable>
-    <PackageId Condition="'$(RuntimeId)' == ''">runtime.native.Thermite.Natives.$(AssemblyName)</PackageId>
-    <PackageId Condition="'$(RuntimeId)' != ''">runtime.$(RuntimeId).Thermite.Natives.$(AssemblyName)</PackageId>
+    <PackageId Condition="'$(RuntimeId)' == ''">Thermite.Natives.$(AssemblyName).runtime.native</PackageId>
+    <PackageId Condition="'$(RuntimeId)' != ''">Thermite.Natives.$(AssemblyName).runtime.$(RuntimeId)</PackageId>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetNativeBuildOutputsForPack</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
@@ -30,6 +30,7 @@
     <NuspecFile>metapackage.nuspec</NuspecFile>
     <NoBuild>true</NoBuild>
     <NuspecProperties>
+        Id=$(PackageId);
         Version=$(PackageVersion);
         Authors=$(Authors);
         RequireLicenseAcceptance=$(PackageRequireLicenseAcceptance);
@@ -37,11 +38,33 @@
         Description=$(PackageDescription);
         Copyright=$(Copyright);
         PlaceholderFile=$(IntermediateOutputPath)_._;
+        RidCatalog=$(IntermediateOutputPath)runtime.json;
       </NuspecProperties>
   </PropertyGroup>
 
-  <Target Name="GeneratePlaceholderFiles" BeforeTargets="GenerateNuspec">
+  <Target Name="GenerateNuspecFiles" BeforeTargets="GenerateNuspec">
+    <ItemGroup>
+      <_supportedRuntimeIds Include="$(NativeRuntimeIds)">
+      </_supportedRuntimeIds>
+      <_runtimeSpecificDependencies Include="@(_supportedRuntimeIds)">
+      <Json>
+    "%(Identity)": {
+      "$(PackageId)": {
+        "Thermite.Natives.$(AssemblyName).runtime.%(Identity)": "$(PackageVersion)"
+      }
+    }</Json>
+      </_runtimeSpecificDependencies>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_runtimeJsonContent>{
+  "runtimes": {@(_runtimeSpecificDependencies->'%(Json)', ',')
+  }
+}</_runtimeJsonContent>
+    </PropertyGroup>
+
     <Touch Files="$(IntermediateOutputPath)_._" AlwaysCreate="true" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)runtime.json" Lines="$(_runtimeJsonContent)" Overwrite="true" />
   </Target>
 
   <Target Name="GetNativeBuildOutputsForPack">
