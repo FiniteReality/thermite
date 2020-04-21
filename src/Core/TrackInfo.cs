@@ -42,28 +42,28 @@ namespace Thermite
         /// <summary>
         /// The name of the track this <see cref="TrackInfo" /> represents.
         /// </summary>
-        public string TrackName;
+        public string TrackName { get; set; }
 
         /// <summary>
         /// The original location where the track can be found.
         /// </summary>
-        public Uri OriginalLocation;
+        public Uri OriginalLocation { get; set; }
 
         /// <summary>
         /// The machine-readable location where the track audio can be located.
         /// </summary>
-        public Uri AudioLocation;
+        public Uri AudioLocation { get; set; }
 
         /// <summary>
         /// Overrides the media type identified while reading
         /// <see cref="AudioLocation"/>.
         /// </summary>
-        public string? MediaTypeOverride;
+        public string? MediaTypeOverride { get; set; }
 
         /// <summary>
         /// Overrides the codec type identified while reading
         /// <see cref="AudioLocation"/>.
         /// </summary>
-        public IAudioCodec? CodecOverride;
+        public IAudioCodec? CodecOverride { get; set; }
     }
 }
