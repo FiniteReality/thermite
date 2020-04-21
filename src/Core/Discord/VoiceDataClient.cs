@@ -52,17 +52,14 @@ namespace Thermite.Discord
                 Timeout.Infinite, Timeout.Infinite);
             _socket = socket;
 
-            gateway.ClientSsrcUpdated += (_, ssrc) => {
-                _ssrc = ssrc;
-            };
+            gateway.ClientSsrcUpdated +=
+                (_, ssrc) => _ssrc = ssrc;
 
-            gateway.RemoteEndPointUpdated += (_, endpoint) => {
-                _remoteEndPoint = endpoint;
-            };
+            gateway.RemoteEndPointUpdated +=
+                (_, endpoint) => _remoteEndPoint = endpoint;
 
-            gateway.SessionEncryptionKeyUpdated += (_, key) => {
-                _sessionEncryptionKey = key;
-            };
+            gateway.SessionEncryptionKeyUpdated +=
+                (_, key) => _sessionEncryptionKey = key;
         }
 
         public ValueTask DisposeAsync()

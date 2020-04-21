@@ -32,7 +32,7 @@ namespace Thermite.Transcoders
                 { ChannelCount: 2, SamplingRate: 48000 }
                     => new OpusPassthroughTranscoder(input),
 
-                { ChannelCount: _, SamplingRate: _}
+                { ChannelCount: _, SamplingRate: _ }
                     => new OpusDecodingTranscoder(input, opusCodec),
 
                 _ => InvalidCodec()

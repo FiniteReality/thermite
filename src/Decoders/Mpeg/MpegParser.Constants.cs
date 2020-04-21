@@ -28,7 +28,7 @@ namespace Thermite.Decoders.Mpeg
             };
 
         private static readonly int[,,] BitrateLookupTable
-            = new[,,]
+            = new[, ,]
             {
                 { // Version 2.5
                     { 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0 }, // Reserved
