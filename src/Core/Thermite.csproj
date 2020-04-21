@@ -15,7 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Interop/MiniMp3/Thermite.Interop.MiniMp3.csproj" />
     <ProjectReference Include="../Interop/Opus/Thermite.Interop.Opus.csproj" />
     <ProjectReference Include="../Interop/Sodium/Thermite.Interop.Sodium.csproj" />
   </ItemGroup>
