@@ -9,19 +9,19 @@ namespace Thermite.Providers
     /// A provider factory for retrieving audio files from HTTP(S) locations.
     /// </summary>
     [Export(typeof(IAudioProviderFactory))]
-    public sealed class GenericHttpProviderFactory : IAudioProviderFactory
+    public sealed class HttpProviderFactory : IAudioProviderFactory
     {
         private readonly IHttpClientFactory _clientFactory;
 
         /// <summary>
-        /// Creates a new instance of the
-        /// <see cref="GenericHttpProviderFactory"/> type.
+        /// Creates a new instance of the <see cref="HttpProviderFactory"/>
+        /// type.
         /// </summary>
         /// <param name="clientFactory">
         /// The <see cref="IHttpClientFactory"/> used for creating instances of
         /// <see cref="HttpClient"/>.
         /// </param>
-        public GenericHttpProviderFactory(IHttpClientFactory clientFactory)
+        public HttpProviderFactory(IHttpClientFactory clientFactory)
         {
             _clientFactory = clientFactory;
         }
