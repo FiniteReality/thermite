@@ -4,6 +4,7 @@ using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 using static TerraFX.Utilities.State;
@@ -22,8 +23,6 @@ namespace Thermite.Discord
             }
 
             _receivePipe.Reset();
-            _sendPipe.Reset();
-            _serializer.Reset();
             _stopCancelTokenSource?.Dispose();
             _stopCancelTokenSource = new CancellationTokenSource();
             using var linkedTokenSource = CancellationTokenSource
@@ -41,11 +40,10 @@ namespace Thermite.Discord
                     await _websocket.ConnectAsync(endpoint, cancellationToken);
 
                     await Task.WhenAll(
-                        RunHeartbeatAsync(_serializer, runCancelToken),
-                        RunProcessAsync(_receivePipe.Reader, _serializer,
-                            runCancelToken),
+                        RunHeartbeatAsync(runCancelToken),
+                        RunProcessAsync(_receivePipe.Reader, runCancelToken),
                         RunReceiveAsync(_receivePipe.Writer, runCancelToken),
-                        RunSendAsync(_sendPipe.Reader, runCancelToken)
+                        RunSendAsync(_sendChannel.Reader, runCancelToken)
                     );
                 }
             }
@@ -66,34 +64,24 @@ namespace Thermite.Discord
             }
         }
 
-        private ValueTask<FlushResult> FlushWritePipe(
-            CancellationToken cancellationToken = default)
-        {
-            _serializer.Reset();
-
-            return _sendPipe.Writer.FlushAsync(cancellationToken);
-        }
-
-        private async Task RunHeartbeatAsync(Utf8JsonWriter writer,
+        private async Task RunHeartbeatAsync(
             CancellationToken cancellationToken = default)
         {
             await _heartbeatMutex.WaitAsync(cancellationToken);
 
-            FlushResult result = default;
-            while (!result.IsCompleted)
+            bool completed = false;
+            while (!completed)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 await Task.Delay(_heartbeatInterval, cancellationToken);
 
-                SendHeartbeat(writer, _nonce++);
-
-                result = await FlushWritePipe(cancellationToken);
+                completed = await SendHeartbeatAsync(
+                    _nonce++, cancellationToken);
             }
         }
 
         private async Task RunProcessAsync(PipeReader reader,
-            Utf8JsonWriter writer,
             CancellationToken cancellationToken = default)
         {
             ReadResult readResult = default;
@@ -111,15 +99,11 @@ namespace Thermite.Discord
                     var consumed = buffer.Start;
                     var examined = buffer.End;
 
-                    if (await TryProcessPacketAsync(writer,
-                        ref buffer, cancellationToken))
+                    if (await TryProcessPacketAsync(ref buffer,
+                        cancellationToken))
                     {
                         consumed = buffer.Start;
                         examined = consumed;
-
-                        if (_serializer.BytesCommitted > 0)
-                            flushResult = await FlushWritePipe(
-                                cancellationToken);
                     }
 
                     reader.AdvanceTo(consumed, examined);
@@ -161,58 +145,17 @@ namespace Thermite.Discord
             }
         }
 
-        private async Task RunSendAsync(PipeReader reader,
+        private async Task RunSendAsync(
+            ChannelReader<ArrayBufferWriter<byte>> reader,
             CancellationToken cancellationToken = default)
         {
-            ReadResult readResult = default;
-            try
+            while (await reader.WaitToReadAsync(cancellationToken))
             {
-                while (!readResult.IsCompleted)
+                if (reader.TryRead(out var buffer))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    readResult = await reader.ReadAsync(cancellationToken);
-                    var buffer = readResult.Buffer;
-
-                    while (GetWholeMessage(ref buffer, out var message))
-                    {
-                        // TODO: support multi-segment messages
-                        if (message.IsSingleSegment)
-                        {
-                            await _websocket.SendAsync(message.First,
-                                WebSocketMessageType.Text, true,
-                                cancellationToken);
-                        }
-                    }
-
-                    reader.AdvanceTo(buffer.Start, buffer.End);
+                    await _websocket.SendAsync(buffer.WrittenMemory,
+                        WebSocketMessageType.Text, true, cancellationToken);
                 }
-            }
-            finally
-            {
-                await reader.CompleteAsync();
-            }
-
-            static bool GetWholeMessage(
-                ref ReadOnlySequence<byte> sequence,
-                out ReadOnlySequence<byte> message)
-            {
-                message = default;
-
-                if (sequence.Length == 0)
-                    return false;
-
-                var reader = new Utf8JsonReader(sequence);
-
-                if (!reader.TryReadToken(JsonTokenType.StartObject))
-                    return false;
-
-                if (!reader.TrySkip())
-                    return false;
-
-                message = sequence.Slice(sequence.Start, reader.Position);
-                sequence = sequence.Slice(reader.Position);
-                return true;
             }
         }
     }

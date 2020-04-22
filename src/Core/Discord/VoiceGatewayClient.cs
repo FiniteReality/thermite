@@ -8,9 +8,11 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using TerraFX.Utilities;
 using Thermite.Discord.Models;
+using Thermite.Internal;
 using Thermite.Utilities;
 
 using static TerraFX.Utilities.State;
@@ -28,19 +30,17 @@ namespace Thermite.Discord
         private readonly Socket _discoverySocket;
         private readonly SemaphoreSlim _heartbeatMutex;
         private readonly Pipe _receivePipe;
-        private readonly Pipe _sendPipe;
-        private readonly Utf8JsonWriter _serializer;
+        private readonly Channel<ArrayBufferWriter<byte>> _sendChannel;
         private readonly IMemoryOwner<byte> _sessionEncryptionKey;
         private readonly UserToken _userInfo;
         private readonly ClientWebSocket _websocket;
+        private readonly Utf8JsonWriter _writer;
 
         private State _state;
-
-
-        private SpinLock _serializerLock;
         private CancellationTokenSource? _stopCancelTokenSource;
         private TimeSpan _heartbeatInterval;
         private int _nonce;
+        private SpinLock _writerSpinLock;
 
         public IPEndPoint? EndPoint { get; private set; }
         public IPEndPoint? ClientEndPoint { get; private set; }
@@ -68,15 +68,21 @@ namespace Thermite.Discord
             _receivePipe.Reader.Complete();
             _receivePipe.Writer.Complete();
 
-            _sendPipe = new Pipe();
-            _sendPipe.Reader.Complete();
-            _sendPipe.Writer.Complete();
+            _sendChannel = Channel.CreateBounded<ArrayBufferWriter<byte>>(
+                new BoundedChannelOptions(10)
+                {
+                    AllowSynchronousContinuations = true,
+                    SingleReader = true,
+                    SingleWriter = false,
+                    FullMode = BoundedChannelFullMode.DropOldest
+                });
 
-            _serializer = new Utf8JsonWriter(_sendPipe.Writer);
-            _serializerLock = new SpinLock();
             _sessionEncryptionKey = memoryPool.Rent(SessionEncryptionKeyLength);
             _userInfo = userInfo;
             _websocket = new ClientWebSocket();
+
+            _writer = new Utf8JsonWriter(NullBufferWriter<byte>.Instance);
+            _writerSpinLock = new SpinLock();
 
             ClientEndPoint = clientEndPoint;
 
@@ -97,9 +103,9 @@ namespace Thermite.Discord
                 }
 
                 _heartbeatMutex.Dispose();
-                await _serializer.DisposeAsync();
-                _websocket.Dispose();
                 _sessionEncryptionKey.Dispose();
+                _websocket.Dispose();
+                await _writer.DisposeAsync();
                 _userInfo.Dispose();
 
                 _state.EndDispose();
@@ -112,95 +118,123 @@ namespace Thermite.Discord
                 ThrowInvalidOperationException(
                     "Must be connected to set speaking");
 
-            SendSpeaking(_serializer, speaking, delay, Ssrc);
-
-            await FlushWritePipe();
+            await SendSpeakingAsync(speaking, delay, Ssrc);
         }
 
-        private ValueTask<bool> TryProcessPacketAsync(Utf8JsonWriter writer,
+        private ValueTask<bool> TryProcessPacketAsync(
             ref ReadOnlySequence<byte> sequence,
             CancellationToken cancellationToken = default)
         {
             var reader = new Utf8JsonReader(sequence);
 
-            if (!Payload.TryReadOpcode(ref reader, out var opcode))
+            VoiceGatewayPayload payload = default;
+
+            if (!Payload.TryReadOpcode(ref reader, out payload.Opcode))
                 return new ValueTask<bool>(false);
 
-            Task? asyncTask = null;
-            switch (opcode)
+            switch (payload.Opcode)
             {
                 case VoiceGatewayOpcode.Hello:
-                    if (!Payload.TryReadHello(ref reader, out var hello))
+                {
+                    if (!Payload.TryReadHello(ref reader, out payload.Hello))
                         return new ValueTask<bool>(false);
-                    _heartbeatInterval = hello.HeartbeatInterval;
-                    _heartbeatMutex.Release();
-                    SendIdentify(writer);
-                    break;
 
+                    break;
+                }
                 case VoiceGatewayOpcode.Ready:
-                    if (!Payload.TryReadReady(ref reader, out var ready))
+                {
+                    if (!Payload.TryReadReady(ref reader, out payload.Ready))
                         return new ValueTask<bool>(false);
 
-                    if (!IPUtilities.TryParseAddress(ready.SlicedIp, out var address))
-                        return new ValueTask<bool>(false);
-
-                    var remote = new IPEndPoint(address, ready.Port);
-                    ClientSsrcUpdated?.Invoke(this, ready.Ssrc);
-                    Ssrc = ready.Ssrc;
-                    RemoteEndPointUpdated?.Invoke(this, remote);
-                    EndPoint = remote;
-
-                    if (ClientEndPoint != null)
-                    {
-                        SendSelectProtocol(writer, ready);
-                        break;
-                    }
-
-                    asyncTask = PerformDiscoveryAndSelectProtocolAsync(
-                        writer, ready);
                     break;
-
+                }
                 case VoiceGatewayOpcode.SessionDescription:
+                {
                     if (!Payload.TryReadSessionDescription(ref reader,
                         _sessionEncryptionKey.Memory.Span.Slice(0,
                             SessionEncryptionKeyLength)))
                         return new ValueTask<bool>(false);
 
-                    SessionEncryptionKeyUpdated?.Invoke(this,
-                        _sessionEncryptionKey.Memory.Slice(0,
-                            SessionEncryptionKeyLength));
-                    Ready?.Invoke(this, null!);
                     break;
-
+                }
                 case VoiceGatewayOpcode.HeartbeatAck:
+                {
                     if (!Payload.TryReadHeartbeatAck(ref reader,
-                        out var nonce))
+                        out payload.Nonce))
                         return new ValueTask<bool>(false);
 
-                    Debug.Assert(_nonce == nonce + 1, "Nonces didn't match");
                     break;
-
+                }
                 case VoiceGatewayOpcode.Speaking:
-                    if (!reader.TrySkip())
-                        return new ValueTask<bool>(false);
-                    break;
-
+                {
+                    return new ValueTask<bool>(reader.TrySkip());
+                }
                 default:
-                    if (!reader.TrySkip())
-                        return new ValueTask<bool>(false);
-
-                    break;
+                {
+                    return new ValueTask<bool>(reader.TrySkip());
+                }
             }
 
             if (!reader.TryReadToken(JsonTokenType.EndObject))
                 return new ValueTask<bool>(false);
 
             sequence = sequence.Slice(reader.Position);
-            return asyncTask != null
-                ? new ValueTask<bool>(HandleAsyncPartAsync(asyncTask))
-                : new ValueTask<bool>(true);
 
-            static async Task<bool> HandleAsyncPartAsync(Task asyncTask)
+            return TryProcessOpcodeAsync(ref payload, cancellationToken);
+        }
+
+        private ValueTask<bool> TryProcessOpcodeAsync(
+            ref VoiceGatewayPayload payload,
+            CancellationToken cancellationToken = default)
+        {
+            switch (payload.Opcode)
+            {
+                case VoiceGatewayOpcode.Hello:
+                {
+                    _heartbeatInterval = payload.Hello.HeartbeatInterval;
+                    _ = _heartbeatMutex.Release();
+
+                    return SendIdentifyAsync(cancellationToken);
+                }
+                case VoiceGatewayOpcode.Ready:
+                {
+                    if (!IPUtilities.TryParseAddress(
+                        payload.Ready.SlicedIp, out var address))
+                        return new ValueTask<bool>(false);
+
+                    var remote = new IPEndPoint(address, payload.Ready.Port);
+                    ClientSsrcUpdated?.Invoke(this, payload.Ready.Ssrc);
+                    Ssrc = payload.Ready.Ssrc;
+                    RemoteEndPointUpdated?.Invoke(this, remote);
+                    EndPoint = remote;
+
+                    return ClientEndPoint != null
+                        ? SendSelectProtocolAsync(
+                            payload.Ready, cancellationToken)
+                        : HandleTaskAsync(
+                            PerformDiscoveryAndSelectProtocolAsync(
+                                payload.Ready, cancellationToken));
+                }
+                case VoiceGatewayOpcode.SessionDescription:
+                {
+                    SessionEncryptionKeyUpdated?.Invoke(this,
+                        _sessionEncryptionKey.Memory.Slice(0,
+                            SessionEncryptionKeyLength));
+
+                    Ready?.Invoke(this, null!);
+                    return new ValueTask<bool>(true);
+                }
+                case VoiceGatewayOpcode.HeartbeatAck:
+                {
+                    Debug.Assert(_nonce == payload.Nonce + 1,
+                        "Nonces didn't match");
+                    return new ValueTask<bool>(true);
+                }
+            }
+
+            return new ValueTask<bool>(false);
+
+            static async ValueTask<bool> HandleTaskAsync(Task asyncTask)
             {
                 await asyncTask;
 
@@ -212,138 +246,6 @@ namespace Thermite.Discord
 
                 return !(asyncTask is Task<bool> taskReturningBool)
                     || taskReturningBool.Result;
-            }
-        }
-
-        private void SendHeartbeat(Utf8JsonWriter writer, int nonce)
-        {
-            bool lockTaken = false;
-
-            try
-            {
-                _serializerLock.Enter(ref lockTaken);
-
-                Payload.WriteHeartbeat(writer, nonce);
-                writer.Flush();
-            }
-            finally
-            {
-                if (lockTaken)
-                    _serializerLock.Exit();
-            }
-        }
-
-        private void SendIdentify(Utf8JsonWriter writer)
-        {
-            bool lockTaken = false;
-
-            try
-            {
-                _serializerLock.Enter(ref lockTaken);
-
-                Payload.WriteIdentify(writer, _userInfo.UserId, _userInfo.GuildId,
-                    _userInfo.SessionId, _userInfo.Token);
-                writer.Flush();
-            }
-            finally
-            {
-                if (lockTaken)
-                    _serializerLock.Exit();
-            }
-        }
-
-        private void SendSpeaking(Utf8JsonWriter writer, bool speaking,
-            int delay, uint ssrc)
-        {
-            bool lockTaken = false;
-
-            try
-            {
-                _serializerLock.Enter(ref lockTaken);
-
-                Payload.WriteSpeaking(writer, speaking, delay, ssrc);
-                writer.Flush();
-            }
-            finally
-            {
-                if (lockTaken)
-                    _serializerLock.Exit();
-            }
-        }
-
-        private static readonly byte[] DiscoveryPacket = new byte[70];
-        private readonly byte[] _discoveryPacketResponse = new byte[70];
-        private async Task<bool> PerformDiscoveryAndSelectProtocolAsync(
-            Utf8JsonWriter writer, VoiceGatewayReady ready)
-        {
-            Debug.Assert(EndPoint != null);
-
-            var bytesSent = await _discoverySocket.SendToAsync(
-                DiscoveryPacket, SocketFlags.None, EndPoint);
-
-            if (bytesSent != 70)
-                return false;
-
-            var result = await _discoverySocket.ReceiveFromAsync(
-                _discoveryPacketResponse, SocketFlags.None, EndPoint);
-
-            if (result.ReceivedBytes != 70)
-                return false;
-
-            if (!TryGetLocalEndPoint(_discoveryPacketResponse, out var endpoint))
-                return false;
-
-            ClientEndPointUpdated?.Invoke(this, endpoint);
-            ClientEndPoint = endpoint;
-
-            SendSelectProtocol(writer, ready);
-            return true;
-
-            static bool TryGetLocalEndPoint(Span<byte> buffer,
-                out IPEndPoint endPoint)
-            {
-                endPoint = default!;
-
-                // split ip and port into separate spans
-                var addressBuffer = buffer.Slice(4, 64)
-                    .TrimEnd((byte)0);
-                var portBuffer = buffer.Slice(buffer.Length - 2);
-
-                if (!IPUtilities.TryParseAddress(addressBuffer, out var address))
-                    return false;
-
-                if (!BinaryPrimitives.TryReadUInt16LittleEndian(portBuffer,
-                    out ushort port))
-                    return false;
-
-                endPoint = new IPEndPoint(address, port);
-                return true;
-            }
-        }
-
-        private void SendSelectProtocol(Utf8JsonWriter writer,
-            VoiceGatewayReady ready)
-        {
-            if (!ready.Modes.HasFlag(EncryptionModes.XSalsa20_Poly1305_Lite))
-                ThrowInvalidOperationException(
-                    "xsalsa20_poly1305_lite not supported");
-
-            // ClientEndPoint is definitely assigned by this point due to
-            // discovery or from being passed in as a ctor param
-
-            bool lockTaken = false;
-
-            try
-            {
-                _serializerLock.Enter(ref lockTaken);
-
-                Payload.WriteSelectProtocol(writer, ClientEndPoint!,
-                    EncryptionModes.XSalsa20_Poly1305_Lite);
-                writer.Flush();
-            }
-            finally
-            {
-                _serializerLock.Exit();
             }
         }
     }
