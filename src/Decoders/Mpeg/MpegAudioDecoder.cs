@@ -126,8 +126,6 @@ namespace Thermite.Decoders.Mpeg
 
         /// <inheritdoc/>
         public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+            => default;
     }
 }

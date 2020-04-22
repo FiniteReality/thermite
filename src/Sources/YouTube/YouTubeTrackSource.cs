@@ -114,7 +114,7 @@ namespace Thermite.Sources
                 $"{nameof(state)} wasn't {nameof(YouTubeTrackSource)}");
 
             if (source._rateLimiter.CurrentCount < 1)
-                source._rateLimiter.Release();
+                _ = source._rateLimiter.Release();
 
             // Schedule the timer for 10s +/- random(-1.5s, 5.5s)
             // This heuristic should help prevent getting nodes banned at the
@@ -125,7 +125,7 @@ namespace Thermite.Sources
             source._logger.LogTrace("Ratelimit resetting in {timeout}ms",
                 nextTime);
 
-            source._rateLimiterTimer.Change(nextTime, Timeout.Infinite);
+            _ = source._rateLimiterTimer.Change(nextTime, Timeout.Infinite);
         }
 
         /// <inheritdoc/>
@@ -150,7 +150,7 @@ namespace Thermite.Sources
         public IAsyncEnumerable<TrackInfo> GetTracksAsync(Uri location,
             CancellationToken cancellationToken = default)
         {
-            VideoIdGetter getter = UnsupportedUrl;
+            var getter = UnsupportedUrl;
             foreach (var pair in VideoIdProviders)
             {
                 if (pair.Key.IsBaseOf(location))

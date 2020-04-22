@@ -24,7 +24,7 @@ namespace Thermite.Internal
         {
             if (_transcoders.Count > 1)
             {
-                Task[] tasks = new Task[_transcoders.Count];
+                var tasks = new Task[_transcoders.Count];
 
                 for (int x = 0; x < tasks.Length; x++)
                 {

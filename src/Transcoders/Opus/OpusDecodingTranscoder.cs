@@ -128,12 +128,11 @@ namespace Thermite.Transcoders.Opus
                     encoded = opus_decode(decoder, opusData, frame.Length,
                         outputBlock + 1, blockSize, 1);
 
-                if (encoded > 0 &&
-                    !BinaryPrimitives.TryWriteInt16LittleEndian(block,
-                        (short)encoded))
-                    return -1;
-
-                return encoded;
+                return encoded > 0
+                    && !BinaryPrimitives.TryWriteInt16LittleEndian(block,
+                        (short)encoded)
+                    ? -1
+                    : encoded;
             }
         }
 

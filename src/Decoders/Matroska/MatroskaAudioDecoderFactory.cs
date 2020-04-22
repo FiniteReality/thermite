@@ -14,17 +14,15 @@ namespace Thermite.Decoders
     {
         /// <inheritdoc/>
         public IAudioDecoder GetDecoder(PipeReader input)
-        {
-            return new MatroskaAudioDecoder(input);
-        }
+            => new MatroskaAudioDecoder(input);
 
         /// <inheritdoc/>
         public bool IsSupported(string mediaType)
         {
-            return mediaType.Contains("video/webm")
-                || mediaType.Contains("audio/webm")
-                || mediaType.Contains("video/x-matroska")
-                || mediaType.Contains("audio/x-matroska");
+            return mediaType.StartsWith("video/webm")
+                || mediaType.StartsWith("audio/webm")
+                || mediaType.StartsWith("video/x-matroska")
+                || mediaType.StartsWith("audio/x-matroska");
         }
     }
 }

@@ -67,11 +67,10 @@ namespace Thermite.Internal
             _manager = manager;
             _trackQueue = Channel.CreateUnbounded<TrackInfo>(QueueOptions);
 
-            _gatewayClient.Ready += (_, __) => {
-                _connectMutex.Release();
-            };
+            _gatewayClient.Ready +=
+                (_, _) => _connectMutex.Release();
 
-            _state.Transition(to: Initialized);
+            _ = _state.Transition(to: Initialized);
         }
 
         public async ValueTask DisposeAsync()
@@ -152,9 +151,7 @@ namespace Thermite.Internal
 
         /// <inheritdoc/>
         public ValueTask EnqueueAsync(TrackInfo track)
-        {
-            return _trackQueue.Writer.WriteAsync(track);
-        }
+            => _trackQueue.Writer.WriteAsync(track);
 
         private async Task RunAsync(
             CancellationToken cancellationToken = default)

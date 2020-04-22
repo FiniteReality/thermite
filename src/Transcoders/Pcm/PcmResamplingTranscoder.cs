@@ -76,8 +76,6 @@ namespace Thermite.Transcoders.Pcm
 
         /// <inheritdoc/>
         public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+            => default;
     }
 }

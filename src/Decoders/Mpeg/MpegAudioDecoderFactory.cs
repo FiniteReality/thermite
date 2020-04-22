@@ -13,14 +13,10 @@ namespace Thermite.Decoders
     {
         /// <inheritdoc/>
         public IAudioDecoder GetDecoder(PipeReader input)
-        {
-            return new MpegAudioDecoder(input);
-        }
+            => new MpegAudioDecoder(input);
 
         /// <inheritdoc/>
         public bool IsSupported(string mediaType)
-        {
-            return mediaType.Contains("audio/mpeg");
-        }
+            => mediaType.StartsWith("audio/mpeg");
     }
 }

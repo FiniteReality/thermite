@@ -164,7 +164,7 @@ namespace Thermite.Decoders.Matroska
                     out var length, out var data))
                 return false;
 
-            EbmlElementId ebmlElement = (EbmlElementId)elementId;
+            var ebmlElement = (EbmlElementId)elementId;
 
             status = EbmlParser.TryHandleEbmlElement(ref _state,
                 ref _currentAudioTrack, ebmlElement, length, ref data);
@@ -205,10 +205,7 @@ namespace Thermite.Decoders.Matroska
 
                 // if current best is not an audio track, we are
                 // automatically better
-                if (!currentBest.IsAudio)
-                    return true;
-
-                return false;
+                return !currentBest.IsAudio;
             }
         }
 

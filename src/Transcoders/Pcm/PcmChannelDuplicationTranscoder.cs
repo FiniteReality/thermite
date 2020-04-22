@@ -68,8 +68,6 @@ namespace Thermite.Transcoders.Pcm
                     _codec.SamplingRate));
 
         public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+            => default;
     }
 }

@@ -16,10 +16,9 @@ namespace Thermite.Transcoders.Opus
 
         public Task RunAsync(CancellationToken cancellationToken = default)
         {
-            if (cancellationToken.IsCancellationRequested)
-                return Task.FromCanceled(cancellationToken);
-
-            return Task.CompletedTask;
+            return cancellationToken.IsCancellationRequested
+                ? Task.FromCanceled(cancellationToken)
+                : Task.CompletedTask;
         }
 
         public ValueTask<IAudioCodec> GetOutputCodecAsync(
@@ -28,8 +27,6 @@ namespace Thermite.Transcoders.Opus
                 OpusAudioCodec.DiscordCompatibleOpus);
 
         public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+            => default;
     }
 }

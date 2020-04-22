@@ -53,7 +53,7 @@ namespace Thermite.Transcoders.Mpeg
                     while (TryReadFrame(ref buffer, out var frame))
                     {
                         var block = _outputPipe.Writer.GetMemory(
-                            MINIMP3_MAX_SAMPLES_PER_FRAME * sizeof(short)
+                            (MINIMP3_MAX_SAMPLES_PER_FRAME * sizeof(short))
                             + sizeof(short));
 
                         var success = TryProcessFrame(frame, ref decoder,
@@ -120,8 +120,6 @@ namespace Thermite.Transcoders.Mpeg
                     _codec.SamplingRate));
 
         public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+            => default;
     }
 }

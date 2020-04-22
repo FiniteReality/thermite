@@ -14,11 +14,11 @@ namespace Thermite.Sources.YouTube
     {
         private ref struct StreamInfo
         {
-            public int bitrate;
-            public int mimeTypeRanking;
-            public int sampleRate;
-            public ReadOnlySpan<byte> url;
-            public ReadOnlySpan<byte> mimeType;
+            public int Bitrate;
+            public int MimeTypeRanking;
+            public int SampleRate;
+            public ReadOnlySpan<byte> Url;
+            public ReadOnlySpan<byte> MimeType;
         }
 
         private static readonly byte[] PlayerResponseProperty =
@@ -91,15 +91,15 @@ namespace Thermite.Sources.YouTube
                 out var bestStreamMapStream))
                 return false;
 
-            StreamInfo bestStream = bestStreamMapStream;
+            var bestStream = bestStreamMapStream;
             if (IsBetterStream(bestStream, bestAdaptiveStream))
                 bestStream = bestAdaptiveStream;
 
             if (!TryGetTitle(playerResponse, out var title))
                 return false;
-            if (!TryGetString(bestStream.url, out var location))
+            if (!TryGetString(bestStream.Url, out var location))
                 return false;
-            if (!TryGetString(bestStream.mimeType, out var mediaType))
+            if (!TryGetString(bestStream.MimeType, out var mediaType))
                 return false;
 
             track.TrackName = title!;
@@ -111,13 +111,13 @@ namespace Thermite.Sources.YouTube
 
             static IAudioCodec? GetCodec(string mediaType)
             {
-                const string codecsString = "codecs=\"";
-                var codecsIndex = mediaType.IndexOf(codecsString);
+                const string CodecsString = "codecs=\"";
+                var codecsIndex = mediaType.IndexOf(CodecsString);
 
                 if (codecsIndex < 0)
                     return default;
 
-                var start = codecsIndex + codecsString.Length;
+                var start = codecsIndex + CodecsString.Length;
                 //return mediaType[start..^1];
                 return null;
             }
@@ -258,26 +258,26 @@ namespace Thermite.Sources.YouTube
                             out int _))
                             return false;
 
-                        stream.bitrate = bitrate;
+                        stream.Bitrate = bitrate;
                     }
                     else if (key.SequenceEqual(UrlProperty))
-                        stream.url = value;
+                        stream.Url = value;
                     else if (key.SequenceEqual(TypeProperty))
-                        stream.mimeType = value;
+                        stream.MimeType = value;
                     else if (key.SequenceEqual(AudioSampleRateProperty))
                     {
                         if (!Utf8Parser.TryParse(value, out int sampleRate,
                             out int _))
                             return false;
 
-                        stream.sampleRate = sampleRate;
+                        stream.SampleRate = sampleRate;
                     }
                 }
 
-                if (!IsKnownContentType(stream.mimeType, out var position))
+                if (!IsKnownContentType(stream.MimeType, out var position))
                     position = int.MaxValue;
 
-                stream.mimeTypeRanking = -position;
+                stream.MimeTypeRanking = -position;
 
                 if (IsBetterStream(bestStream, stream))
                     bestStream = stream;
@@ -328,22 +328,22 @@ namespace Thermite.Sources.YouTube
                     out var value))
                 {
                     if (key.SequenceEqual(UrlProperty))
-                        stream.url = value;
+                        stream.Url = value;
                     else if (key.SequenceEqual(QualityProperty))
                     {
                         if (!IsKnownQuality(value, out var qualityPosition))
                             return false;
-                        stream.bitrate = -qualityPosition;
+                        stream.Bitrate = -qualityPosition;
                     }
                     else if (key.SequenceEqual(TypeProperty))
-                        stream.mimeType = value;
+                        stream.MimeType = value;
                 }
 
-                if (!IsKnownContentType(stream.mimeType,
+                if (!IsKnownContentType(stream.MimeType,
                     out var contentPosition))
                     contentPosition = int.MaxValue;
 
-                stream.mimeTypeRanking = -contentPosition;
+                stream.MimeTypeRanking = -contentPosition;
 
                 if (IsBetterStream(bestStream, stream))
                     bestStream = stream;
@@ -397,14 +397,14 @@ namespace Thermite.Sources.YouTube
         private static bool IsBetterStream(StreamInfo currentBest,
             StreamInfo stream)
         {
-            if (stream.mimeTypeRanking > currentBest.mimeTypeRanking)
+            if (stream.MimeTypeRanking > currentBest.MimeTypeRanking)
                 return true;
 
-            if (stream.bitrate > currentBest.bitrate)
+            if (stream.Bitrate > currentBest.Bitrate)
                 return true;
 
-            var streamDistance = 48000 - stream.sampleRate;
-            var currentBestDistance = 48000 - currentBest.sampleRate;
+            var streamDistance = 48000 - stream.SampleRate;
+            var currentBestDistance = 48000 - currentBest.SampleRate;
 
             if (streamDistance < 0)
                 streamDistance = -streamDistance;
@@ -412,10 +412,7 @@ namespace Thermite.Sources.YouTube
             if (currentBestDistance < 0)
                 currentBestDistance = -currentBestDistance;
 
-            if (streamDistance < currentBestDistance)
-                return true;
-
-            return false;
+            return streamDistance < currentBestDistance;
         }
     }
 }

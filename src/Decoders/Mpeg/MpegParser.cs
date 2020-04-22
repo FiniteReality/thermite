@@ -178,13 +178,8 @@ namespace Thermite.Decoders.Mpeg
             version = (byte)(properties & 0b000_11_00_0) >> 3;
             layer = (byte)(properties & 0b000_00_11_0) >> 1;
 
-            if (VersionLookupTable[version] == 0)
-                return false;
-
-            if (LayerLookupTable[version] == 0)
-                return false;
-
-            return true;
+            return VersionLookupTable[version] != 0
+                && LayerLookupTable[version] != 0;
         }
     }
 }

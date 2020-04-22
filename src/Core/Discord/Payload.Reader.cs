@@ -36,11 +36,8 @@ namespace Thermite.Discord
         {
             nonce = default;
 
-            if (!reader.TryReadToken(JsonTokenType.Number)
-                || !reader.TryGetInt32(out nonce))
-                return false;
-
-            return true;
+            return reader.TryReadToken(JsonTokenType.Number)
+                && reader.TryGetInt32(out nonce);
         }
 
         public static bool TryReadHello(ref Utf8JsonReader reader,
@@ -71,10 +68,8 @@ namespace Thermite.Discord
                 }
             }
 
-            if (!reader.TryReadToken(JsonTokenType.EndObject))
-                return false;
-
-            return read == 1;
+            return reader.TryReadToken(JsonTokenType.EndObject)
+                && read == 1;
         }
 
         public static bool TryReadReady(ref Utf8JsonReader reader,
@@ -138,10 +133,8 @@ namespace Thermite.Discord
                 }
             }
 
-            if (!reader.TryReadToken(JsonTokenType.EndObject))
-                return false;
-
-            return read == 4;
+            return reader.TryReadToken(JsonTokenType.EndObject)
+                && read == 4;
 
             static bool TryReadEncryptionMode(ref Utf8JsonReader reader,
                 out EncryptionModes mode)
@@ -210,10 +203,8 @@ namespace Thermite.Discord
                 }
             }
 
-            if (!reader.TryReadToken(JsonTokenType.EndObject))
-                return false;
-
-            return read == 1;
+            return reader.TryReadToken(JsonTokenType.EndObject)
+                && read == 1;
         }
     }
 }

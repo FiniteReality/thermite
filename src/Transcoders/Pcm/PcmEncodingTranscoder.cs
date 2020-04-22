@@ -135,12 +135,11 @@ namespace Thermite.Transcoders.Pcm
                             (float*)sampleData, frameSize, outputBlock,
                                 block.Length);
 
-                if (encoded > 0 &&
-                    !BinaryPrimitives.TryWriteInt16LittleEndian(block,
-                        (short)encoded))
-                    return -1;
-
-                return encoded;
+                return encoded > 0
+                    && !BinaryPrimitives.TryWriteInt16LittleEndian(block,
+                        (short)encoded)
+                    ? -1
+                    : encoded;
             }
         }
 

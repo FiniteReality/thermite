@@ -23,20 +23,14 @@ namespace Thermite.Decoders.Wave
 
         /// <inheritdoc/>
         public Task RunAsync(CancellationToken cancellationToken = default)
-        {
-            throw new System.NotImplementedException();
-        }
+            => throw new System.NotImplementedException();
 
         /// <inheritdoc/>
         public ValueTask<IAudioCodec?> IdentifyCodecAsync(CancellationToken cancellationToken = default)
-        {
-            throw new System.NotImplementedException();
-        }
+            => throw new System.NotImplementedException();
 
         /// <inheritdoc/>
         public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+            => default;
     }
 }

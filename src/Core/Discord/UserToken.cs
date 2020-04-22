@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Text;
 
 namespace Thermite.Discord
@@ -30,13 +31,17 @@ namespace Thermite.Discord
 
             _sessionIdLength = Encoding.UTF8.GetByteCount(sessionId);
             _sessionIdMemory = memoryPool.Rent(_sessionIdLength);
-            Encoding.UTF8.GetBytes(sessionId,
+            var bytes = Encoding.UTF8.GetBytes(sessionId,
                 _sessionIdMemory.Memory.Span);
+
+            Debug.Assert(bytes == _sessionIdLength);
 
             _tokenLength = Encoding.UTF8.GetByteCount(token);
             _tokenMemory = memoryPool.Rent(_tokenLength);
-            Encoding.UTF8.GetBytes(token,
+            bytes = Encoding.UTF8.GetBytes(token,
                 _tokenMemory.Memory.Span);
+
+            Debug.Assert(bytes == _tokenLength);
         }
 
         public UserToken(ulong userId, ulong guildId,

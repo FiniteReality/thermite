@@ -80,7 +80,7 @@ namespace Thermite.Discord
 
             ClientEndPoint = clientEndPoint;
 
-            _state.Transition(to: Initialized);
+            _ = _state.Transition(to: Initialized);
         }
 
         public async ValueTask DisposeAsync()
@@ -196,12 +196,11 @@ namespace Thermite.Discord
                 return new ValueTask<bool>(false);
 
             sequence = sequence.Slice(reader.Position);
-            if (asyncTask != null)
-                return new ValueTask<bool>(HandleAsyncPart(asyncTask));
+            return asyncTask != null
+                ? new ValueTask<bool>(HandleAsyncPartAsync(asyncTask))
+                : new ValueTask<bool>(true);
 
-            return new ValueTask<bool>(true);
-
-            static async Task<bool> HandleAsyncPart(Task asyncTask)
+            static async Task<bool> HandleAsyncPartAsync(Task asyncTask)
             {
                 await asyncTask;
 
@@ -211,10 +210,8 @@ namespace Thermite.Discord
                 // fail (e.g. IP discovery) - in which case we should return
                 // its success values.
 
-                if (asyncTask is Task<bool> taskReturningBool)
-                    return taskReturningBool.Result;
-
-                return true;
+                return !(asyncTask is Task<bool> taskReturningBool)
+                    || taskReturningBool.Result;
             }
         }
 
@@ -275,7 +272,7 @@ namespace Thermite.Discord
         }
 
         private static readonly byte[] DiscoveryPacket = new byte[70];
-        private readonly byte[] DiscoveryPacketResponse = new byte[70];
+        private readonly byte[] _discoveryPacketResponse = new byte[70];
         private async Task<bool> PerformDiscoveryAndSelectProtocolAsync(
             Utf8JsonWriter writer, VoiceGatewayReady ready)
         {
@@ -288,12 +285,12 @@ namespace Thermite.Discord
                 return false;
 
             var result = await _discoverySocket.ReceiveFromAsync(
-                DiscoveryPacketResponse, SocketFlags.None, EndPoint);
+                _discoveryPacketResponse, SocketFlags.None, EndPoint);
 
             if (result.ReceivedBytes != 70)
                 return false;
 
-            if (!TryGetLocalEndPoint(DiscoveryPacketResponse, out var endpoint))
+            if (!TryGetLocalEndPoint(_discoveryPacketResponse, out var endpoint))
                 return false;
 
             ClientEndPointUpdated?.Invoke(this, endpoint);

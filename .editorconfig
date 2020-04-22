@@ -45,7 +45,7 @@ indent_style = tab
 #    suggest const declarations be pascal case
 #    suggest interfaces be pascal case prefixed with I
 #    suggest parameters be camel case
-#    suggest private and internal static fields be camel case and prefixed with s and underscore
+#    suggest private and internal static fields be pascal case
 #    suggest private and internal fields be camel case and prefixed with underscore
 #    suggest public and protected declarations be pascal case
 #    suggest static readonly declarations be pascal case
@@ -68,9 +68,9 @@ dotnet_naming_rule.parameters_should_be_camel_case.severity = suggestion
 dotnet_naming_rule.parameters_should_be_camel_case.style = camel_case
 dotnet_naming_rule.parameters_should_be_camel_case.symbols = parameters
 
-dotnet_naming_rule.private_and_internal_static_fields_should_be_camel_case_prefixed_with_s_and_underscore.severity = suggestion
-dotnet_naming_rule.private_and_internal_static_fields_should_be_camel_case_prefixed_with_s_and_underscore.style = camel_case_prefixed_with_s_and_underscore
-dotnet_naming_rule.private_and_internal_static_fields_should_be_camel_case_prefixed_with_s_and_underscore.symbols = private_and_internal_static_fields
+dotnet_naming_rule.private_and_internal_static_fields_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.private_and_internal_static_fields_should_be_pascal_case.style = pascal_case
+dotnet_naming_rule.private_and_internal_static_fields_should_be_pascal_case.symbols = private_and_internal_static_fields
 
 dotnet_naming_rule.private_and_internal_fields_should_be_camel_case_prefixed_with_underscore.severity = suggestion
 dotnet_naming_rule.private_and_internal_fields_should_be_camel_case_prefixed_with_underscore.style = camel_case_prefixed_with_underscore
@@ -100,9 +100,6 @@ dotnet_naming_rule.type_parameters_should_be_pascal_case_prefixed_with_t.symbols
 ###############################################################################
 [*.cs]
 dotnet_naming_style.camel_case.capitalization = camel_case
-
-dotnet_naming_style.camel_case_prefixed_with_s_and_underscore.capitalization = camel_case
-dotnet_naming_style.camel_case_prefixed_with_s_and_underscore.required_prefix = s_
 
 dotnet_naming_style.camel_case_prefixed_with_underscore.capitalization = camel_case
 dotnet_naming_style.camel_case_prefixed_with_underscore.required_prefix = _
@@ -328,7 +325,7 @@ csharp_space_between_square_brackets = false
 
 ###############################################################################
 # Set csharp style options to:
-#   suggest braces,
+#   don't suggest braces,
 #   suggest simple default expressions,
 #   suggest a preferred modifier order,
 #   suggest conditional delegate calls,
@@ -359,7 +356,7 @@ csharp_preferred_modifier_order = public,private,protected,internal,static,exter
 csharp_style_conditional_delegate_call = true:suggestion
 csharp_style_deconstructed_variable_declaration = true:suggestion
 
-csharp_style_expression_bodied_accessors = false:suggestion
+csharp_style_expression_bodied_accessors = when_on_single_line:suggestion
 csharp_style_expression_bodied_constructors = false:suggestion
 csharp_style_expression_bodied_indexers = when_on_single_line:suggestion
 csharp_style_expression_bodied_lambdas = true:suggestion

@@ -57,11 +57,8 @@ namespace Thermite.Utilities
 
             value = default;
 
-            if (TryReadTo(ref sequence, (byte)'=', out key) &&
-                TryReadTo(ref sequence, (byte)'&', out value))
-                return true;
-
-            return false;
+            return TryReadTo(ref sequence, (byte)'=', out key)
+                && TryReadTo(ref sequence, (byte)'&', out value);
         }
 
         /// <summary>
@@ -109,11 +106,8 @@ namespace Thermite.Utilities
 
             value = default;
 
-            if (TryReadTo(ref span, (byte)'=', out key) &&
-                TryReadTo(ref span, (byte)'&', out value))
-                return true;
-
-            return false;
+            return TryReadTo(ref span, (byte)'=', out key)
+                && TryReadTo(ref span, (byte)'&', out value);
         }
 
         /// <summary>
@@ -136,15 +130,11 @@ namespace Thermite.Utilities
             Span<byte> destination, out int decodedBytes)
         {
             decodedBytes = default;
-            if (destination.Length < source.Length)
-                return false;
-
-            if (!source.TryCopyTo(destination))
-                return false;
-
-            return TryUrlDecode(
-                destination.Slice(0, source.Length),
-                out decodedBytes);
+            return destination.Length >= source.Length
+                && source.TryCopyTo(destination)
+                && TryUrlDecode(
+                    destination.Slice(0, source.Length),
+                    out decodedBytes);
         }
 
         /// <summary>

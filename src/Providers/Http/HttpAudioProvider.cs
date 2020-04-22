@@ -84,10 +84,7 @@ namespace Thermite.Providers.Http
         private async Task<HttpResponseMessage> GetHttpResponseMessageAsync(
             CancellationToken cancellationToken = default)
         {
-            if (_response != null)
-                return _response;
-
-            return _response = await _client.GetAsync(_location,
+            return _response ??= await _client.GetAsync(_location,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
         }

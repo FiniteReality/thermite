@@ -96,14 +96,14 @@ namespace Thermite.Transcoders.Pcm
                 var elements = (int)(frame.Length / sizeof(Vector<T>));
 
                 var destination = writer.GetSpan(sizeof(short) +
-                    (int)frame.Length * (sizeof(float) / sizeof(T)));
+                    ((int)frame.Length * (sizeof(float) / sizeof(T))));
                 var pcmDestination = destination.Slice(sizeof(short));
                 var bytesWritten = 0;
 
                 Unsafe.SkipInit(out Vector<T> vectorInput);
                 for (var x = 0; x < elements; x++)
                 {
-                    ReadOnlySequence<byte> sampleBlock = frame.Slice(
+                    var sampleBlock = frame.Slice(
                         x * sizeof(Vector<T>), sizeof(Vector<T>));
 
                     var block = Unsafe.AsPointer(ref vectorInput);
@@ -119,9 +119,9 @@ namespace Thermite.Transcoders.Pcm
                     pcmDestination = pcmDestination.Slice(bytesWritten);
                 }
 
-                Span<float> remainingDestination =
+                var remainingDestination =
                     MemoryMarshal.Cast<byte, float>(pcmDestination);
-                SequenceReader<byte> remaining = new SequenceReader<byte>(
+                var remaining = new SequenceReader<byte>(
                     frame.Slice(elements * sizeof(Vector<T>)));
 
                 for (int x = 0; !remaining.End; x++)
@@ -182,13 +182,13 @@ namespace Thermite.Transcoders.Pcm
                 return true;
             }
 
-            static bool TryWriteAsFloat<U>(Vector<U> input,
+            static bool TryWriteAsFloat<T2>(Vector<T2> input,
                 Span<byte> destination, ref int bytesWritten)
-                where U : unmanaged
+                where T2 : unmanaged
             {
-                if (typeof(U) == typeof(byte))
+                if (typeof(T2) == typeof(byte))
                 {
-                    Vector<byte> byteInput = (Vector<byte>)input;
+                    var byteInput = (Vector<byte>)input;
 
                     Vector.Widen(byteInput, out var lower, out var higher);
 
@@ -197,9 +197,9 @@ namespace Thermite.Transcoders.Pcm
                         && TryWriteAsFloat(higher,
                             destination, ref bytesWritten);
                 }
-                else if (typeof(U) == typeof(sbyte))
+                else if (typeof(T2) == typeof(sbyte))
                 {
-                    Vector<sbyte> sbyteInput = (Vector<sbyte>)input;
+                    var sbyteInput = (Vector<sbyte>)input;
 
                     Vector.Widen(sbyteInput, out var lower, out var higher);
 
@@ -208,9 +208,9 @@ namespace Thermite.Transcoders.Pcm
                         && TryWriteAsFloat(higher,
                             destination, ref bytesWritten);
                 }
-                else if (typeof(U) == typeof(short))
+                else if (typeof(T2) == typeof(short))
                 {
-                    Vector<short> shortInput = (Vector<short>)input;
+                    var shortInput = (Vector<short>)input;
 
                     Vector.Widen(shortInput, out var lower, out var higher);
 
@@ -219,9 +219,9 @@ namespace Thermite.Transcoders.Pcm
                         && TryWriteAsFloat(higher,
                             destination, ref bytesWritten);
                 }
-                else if (typeof(U) == typeof(ushort))
+                else if (typeof(T2) == typeof(ushort))
                 {
-                    Vector<ushort> ushortInput = (Vector<ushort>)input;
+                    var ushortInput = (Vector<ushort>)input;
 
                     Vector.Widen(ushortInput, out var lower, out var higher);
 
@@ -230,11 +230,11 @@ namespace Thermite.Transcoders.Pcm
                         && TryWriteAsFloat(higher,
                             destination, ref bytesWritten);
                 }
-                else if (typeof(U) == typeof(int))
+                else if (typeof(T2) == typeof(int))
                 {
                     // input in range [T.MinValue, T.MaxValue) (T is signed)
-                    Vector<int> intInput = (Vector<int>)input;
-                    Vector<float> maxValue = new Vector<float>(MaxSignedValue);
+                    var intInput = (Vector<int>)input;
+                    var maxValue = new Vector<float>(MaxSignedValue);
 
                     var desired = Vector.ConvertToSingle(intInput);
                     desired /= maxValue; // take to range [-1.0, 1.0)
@@ -244,11 +244,11 @@ namespace Thermite.Transcoders.Pcm
                     bytesWritten += Vector<float>.Count * sizeof(float);
                     return success;
                 }
-                else if (typeof(U) == typeof(uint))
+                else if (typeof(T2) == typeof(uint))
                 {
                     // input in range [0, T.MaxValue) (T is unsigned)
-                    Vector<uint> intInput = (Vector<uint>)input;
-                    Vector<float> maxValue = new Vector<float>(MaxSignedValue);
+                    var intInput = (Vector<uint>)input;
+                    var maxValue = new Vector<float>(MaxSignedValue);
 
                     var desired = Vector.ConvertToSingle(intInput);
                     // take to range [T.MinValue, T.MaxValue)
@@ -277,8 +277,6 @@ namespace Thermite.Transcoders.Pcm
                     _codec.SamplingRate));
 
         public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+            => default;
     }
 }

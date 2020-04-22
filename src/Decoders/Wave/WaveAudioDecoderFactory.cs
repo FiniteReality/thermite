@@ -13,9 +13,7 @@ namespace Thermite.Decoders
     {
         /// <inheritdoc/>
         public IAudioDecoder GetDecoder(PipeReader input)
-        {
-            return new WaveAudioDecoder(input);
-        }
+            => new WaveAudioDecoder(input);
 
         /// <inheritdoc/>
         public bool IsSupported(string mediaType)

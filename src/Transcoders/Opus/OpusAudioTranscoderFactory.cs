@@ -48,8 +48,6 @@ namespace Thermite.Transcoders
 
         /// <inheritdoc/>
         public bool IsSupported(IAudioCodec codec)
-        {
-            return codec is OpusAudioCodec;
-        }
+            => codec is OpusAudioCodec;
     }
 }

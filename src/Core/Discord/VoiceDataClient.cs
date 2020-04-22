@@ -10,6 +10,7 @@ using static System.Buffers.Binary.BinaryPrimitives;
 using static Thermite.Utilities.FrameParsingUtilities;
 using static Thermite.Interop.Opus;
 using static Thermite.Interop.Sodium;
+using System.Diagnostics;
 
 namespace Thermite.Discord
 {
@@ -63,14 +64,10 @@ namespace Thermite.Discord
         }
 
         public ValueTask DisposeAsync()
-        {
-            return _sendTimer.DisposeAsync();
-        }
+            => _sendTimer.DisposeAsync();
 
         public void Start()
-        {
-            _sendTimer.Change(0, Timeout.Infinite);
-        }
+            => _sendTimer.Change(0, Timeout.Infinite);
 
         private static void Process(object? state)
         {
@@ -87,8 +84,7 @@ namespace Thermite.Discord
             var endpoint = client._remoteEndPoint!;
             var encryptionKey = client._sessionEncryptionKey!.Value.Span;
 
-            ReadOnlySequence<byte> buffer =
-                new ReadOnlySequence<byte>(SilenceBuffer);
+            var buffer = new ReadOnlySequence<byte>(SilenceBuffer);
             var readSuccess = reader.TryRead(out var readResult);
 
             if (!readSuccess)
@@ -96,7 +92,7 @@ namespace Thermite.Discord
                 // adapt to potential buffer underruns in the underlying pipe
                 if (failedReadAttempts++ < 3)
                 {
-                    timer.Change(1, Timeout.Infinite);
+                    _ = timer.Change(1, Timeout.Infinite);
                     return;
                 }
             }
@@ -128,7 +124,7 @@ namespace Thermite.Discord
 
 
             if (!readResult.IsCompleted)
-                timer.Change(frameSize switch
+                _ = timer.Change(frameSize switch
                 {
                     // known opus frame sizes at 48khz (discord audio)
                     // and their length in ms

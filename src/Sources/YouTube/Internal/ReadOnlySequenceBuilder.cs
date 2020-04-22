@@ -49,15 +49,11 @@ namespace Thermite.Internal
 
         [DebuggerStepThrough]
         public ReadOnlySequence<T> AsSequence()
-        {
-            return new ReadOnlySequence<T>(_first!, 0, _head!, _head!.Length);
-        }
+            => new ReadOnlySequence<T>(_first!, 0, _head!, _head!.Length);
 
         [DebuggerStepThrough]
         public void Dispose()
-        {
-            _first!.Dispose();
-        }
+            => _first!.Dispose();
 
         [DebuggerStepThrough]
         private Segment CreateNewHead()
@@ -66,7 +62,7 @@ namespace Thermite.Internal
         [DebuggerStepThrough]
         private class Segment : ReadOnlySequenceSegment<T>, IDisposable
         {
-            public readonly IMemoryOwner<T> _memory;
+            internal readonly IMemoryOwner<T> _memory;
 
             private int _length;
 

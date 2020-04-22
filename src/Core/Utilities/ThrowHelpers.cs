@@ -27,9 +27,7 @@ namespace Thermite.Utilities
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowArgumentException(string? paramName,
             string? message)
-        {
-            throw new ArgumentException(message, paramName);
-        }
+            => throw new ArgumentException(message, paramName);
 
         /// <summary>
         /// Throws an instance of the <see cref="ArgumentOutOfRangeException"/>.
@@ -44,9 +42,7 @@ namespace Thermite.Utilities
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowArgumentOutOfRangeException(string? paramName)
-        {
-            throw new ArgumentOutOfRangeException(paramName);
-        }
+            => throw new ArgumentOutOfRangeException(paramName);
 
         /// <summary>
         /// Throws an instance of the <see cref="ArgumentOutOfRangeException"/>.
@@ -91,9 +87,7 @@ namespace Thermite.Utilities
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowExternalException(string? message,
             int errorCode)
-        {
-            throw new ExternalException(message, errorCode);
-        }
+            => throw new ExternalException(message, errorCode);
 
         /// <summary>
         /// Throws an instance of the <see cref="InvalidOperationException"/>
@@ -109,9 +103,7 @@ namespace Thermite.Utilities
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowInvalidOperationException(string? message)
-        {
-            throw new InvalidOperationException(message);
-        }
+            => throw new InvalidOperationException(message);
 
         /// <summary>
         /// Throws an instance of the <see cref="InvalidUriException"/> class.
@@ -130,9 +122,7 @@ namespace Thermite.Utilities
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowInvalidUriException(string? paramName,
             Uri location)
-        {
-            throw new InvalidUriException(paramName, location);
-        }
+            => throw new InvalidUriException(paramName, location);
 
         /// <summary>
         /// Throws an instance of the <see cref="ObjectDisposedException"/>
@@ -147,9 +137,7 @@ namespace Thermite.Utilities
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowObjectDisposedException(string? objectName)
-        {
-            throw new ObjectDisposedException(objectName);
-        }
+            => throw new ObjectDisposedException(objectName);
 
         /// <summary>
         /// Throws an instance of the
@@ -165,8 +153,6 @@ namespace Thermite.Utilities
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowPlatformNotSupportedException(string? message)
-        {
-            throw new PlatformNotSupportedException(message);
-        }
+            => throw new PlatformNotSupportedException(message);
     }
 }

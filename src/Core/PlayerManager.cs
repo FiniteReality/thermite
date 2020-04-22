@@ -95,7 +95,7 @@ namespace Thermite
 
             _udpClients = builder.ToImmutable();
 
-            _state.Transition(to: Initialized);
+            _ = _state.Transition(to: Initialized);
         }
 
         /// <inheritdoc />
@@ -225,9 +225,8 @@ namespace Thermite
                 };
 
             player.ProcessingException +=
-                (sender, args) => {
-                    PlayerProcessingException?.Invoke(sender, args);
-                };
+                (sender, args) => PlayerProcessingException?.Invoke(
+                    sender, args);
 
             player.Start();
 
