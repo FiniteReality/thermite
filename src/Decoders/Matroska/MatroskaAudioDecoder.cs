@@ -17,6 +17,7 @@ namespace Thermite.Decoders.Matroska
         // TODO: this assumes blocks are ordered linearly. While that is likely
         // the case, unordered blocks will cause issues.
 
+        private readonly TaskCompletionSource<IAudioCodec?> _codecPromise;
         private readonly PipeReader _input;
         private readonly Pipe _outputPipe;
 
@@ -30,6 +31,7 @@ namespace Thermite.Decoders.Matroska
 
         internal MatroskaAudioDecoder(PipeReader input)
         {
+            _codecPromise = new TaskCompletionSource<IAudioCodec?>();
             _input = input;
             _outputPipe = new Pipe();
         }
@@ -52,16 +54,37 @@ namespace Thermite.Decoders.Matroska
 
                     while (TryHandleElement(ref buffer, out var status))
                     {
-                        if (status == EbmlHandleStatus.NewBlock &&
-                            !TryWriteBlock(_bestAudioTrack, _outputPipe.Writer,
-                                _state.BlockData))
-                            return;
+                        if (status == EbmlHandleStatus.NewTrack)
+                        {
+                            _ = _codecPromise.TrySetResult(
+                                _bestAudioTrack.CodecId switch
+                                {
+                                    MatroskaCodec.Opus
+                                        => new OpusAudioCodec(
+                                            (int)_bestAudioTrack.SampleRate,
+                                            (int)_bestAudioTrack.ChannelCount,
+                                            (int)_bestAudioTrack.BitDepth),
+                                    MatroskaCodec.MpegLayer1
+                                        => CreateMpegDecoder(),
+                                    MatroskaCodec.MpegLayer2
+                                        => CreateMpegDecoder(),
+                                    MatroskaCodec.MpegLayer3
+                                        => CreateMpegDecoder(),
+                                    _ => null,
+                                });
+                        }
+                        else if (status == EbmlHandleStatus.NewBlock)
+                        {
+                            if (!TryWriteBlock(_bestAudioTrack,
+                                _outputPipe.Writer, _state.BlockData))
+                                return;
+                        }
 
-                        if (status == EbmlHandleStatus.UnsupportedFile ||
+                        else if (status == EbmlHandleStatus.UnsupportedFile ||
                             status == EbmlHandleStatus.NoMoreData)
                             return;
 
-                        if (status == EbmlHandleStatus.MissingData)
+                        else if (status == EbmlHandleStatus.MissingData)
                             break;
                     }
 
@@ -72,7 +95,6 @@ namespace Thermite.Decoders.Matroska
             }
             finally
             {
-                _ = await _outputPipe.Writer.FlushAsync(cancellationToken);
                 await _input.CompleteAsync();
                 await _outputPipe.Writer.CompleteAsync();
             }
@@ -129,23 +151,6 @@ namespace Thermite.Decoders.Matroska
                     return true;
                 }
             }
-        }
-
-        /// <inheritdoc/>
-        public ValueTask<IAudioCodec?> IdentifyCodecAsync(
-            CancellationToken cancellationToken = default)
-        {
-            return new ValueTask<IAudioCodec?>(_bestAudioTrack.CodecId switch
-            {
-                MatroskaCodec.Opus =>
-                    new OpusAudioCodec((int)_bestAudioTrack.SampleRate,
-                        (int)_bestAudioTrack.ChannelCount,
-                        (int)_bestAudioTrack.BitDepth),
-                MatroskaCodec.MpegLayer1 => CreateMpegDecoder(),
-                MatroskaCodec.MpegLayer2 => CreateMpegDecoder(),
-                MatroskaCodec.MpegLayer3 => CreateMpegDecoder(),
-                _ => null,
-            });
 
             static IAudioCodec? CreateMpegDecoder()
             {
@@ -154,6 +159,11 @@ namespace Thermite.Decoders.Matroska
                 return null;
             }
         }
+
+        /// <inheritdoc/>
+        public ValueTask<IAudioCodec?> IdentifyCodecAsync(
+            CancellationToken cancellationToken = default)
+            => new ValueTask<IAudioCodec?>(_codecPromise.Task);
 
         private bool TryHandleElement(ref ReadOnlySequence<byte> buffer,
             out EbmlHandleStatus status)
