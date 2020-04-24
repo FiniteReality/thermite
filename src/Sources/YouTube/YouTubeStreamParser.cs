@@ -1,10 +1,11 @@
 using System;
 using System.Buffers;
 using System.Buffers.Text;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-
+using Thermite.Internal;
 using static Thermite.Utilities.TextParsingUtilities;
 using static Thermite.Utilities.UrlParsingUtilities;
 
@@ -14,181 +15,199 @@ namespace Thermite.Sources.YouTube
     {
         private ref struct StreamInfo
         {
+            public JsonElement Url;
+            public JsonElement MimeType;
             public int Bitrate;
-            public int MimeTypeRanking;
-            public int SampleRate;
-            public ReadOnlySpan<byte> Url;
-            public ReadOnlySpan<byte> MimeType;
         }
 
         private static readonly byte[] PlayerResponseProperty =
             Encoding.UTF8.GetBytes("player_response");
-        private static readonly byte[] AdaptiveFmtsProperty =
-            Encoding.UTF8.GetBytes("adaptive_fmts");
-        private static readonly byte[] UrlEncodedStreamFmtMapProperty =
-            Encoding.UTF8.GetBytes("url_encoded_fmt_stream_map");
         private static readonly byte[] StatusProperty =
             Encoding.UTF8.GetBytes("status");
-
         private static readonly byte[] StatusOkValue =
             Encoding.UTF8.GetBytes("ok");
 
+        private static readonly byte[] VideoDetailsProperty =
+            Encoding.UTF8.GetBytes("videoDetails");
         private static readonly byte[] TitleProperty =
             Encoding.UTF8.GetBytes("title");
 
-        private static readonly byte[] BitrateProperty =
-            Encoding.UTF8.GetBytes("bitrate");
+        private static readonly byte[] StreamingDataProperty =
+            Encoding.UTF8.GetBytes("streamingData");
+        private static readonly byte[] FormatsProperty =
+            Encoding.UTF8.GetBytes("formats");
+        private static readonly byte[] AdaptiveFormatsProperty =
+            Encoding.UTF8.GetBytes("adaptiveFormats");
+
         private static readonly byte[] UrlProperty =
             Encoding.UTF8.GetBytes("url");
-        private static readonly byte[] TypeProperty =
-            Encoding.UTF8.GetBytes("type");
-        private static readonly byte[] AudioSampleRateProperty =
-            Encoding.UTF8.GetBytes("audio_sample_rate");
-
+        private static readonly byte[] MimeTypeProperty =
+            Encoding.UTF8.GetBytes("mimeType");
+        private static readonly byte[] BitrateProperty =
+            Encoding.UTF8.GetBytes("bitrate");
         private static readonly byte[] QualityProperty =
             Encoding.UTF8.GetBytes("quality");
 
         // lower values are higher quality
         private static readonly byte[][] KnownQualityLevels =
         {
-            Encoding.UTF8.GetBytes("hd720"), // -0
-            Encoding.UTF8.GetBytes("medium"), // -1
-            Encoding.UTF8.GetBytes("small"), // -2
-            Encoding.UTF8.GetBytes("tiny"), // -3
+            Encoding.UTF8.GetBytes("hd1080"), // -0
+            Encoding.UTF8.GetBytes("hd720"), // -1
+            Encoding.UTF8.GetBytes("large"), // -2
+            Encoding.UTF8.GetBytes("medium"), // -3
+            Encoding.UTF8.GetBytes("small"), // -4
+            Encoding.UTF8.GetBytes("tiny"), // -5
         };
 
+        // content types containing audio streams
+        // lower values are more preferred
         private static readonly byte[][] KnownContentTypes =
         {
-            Encoding.UTF8.GetBytes("audio/webm; codecs=\"opus\""), // -0
-            Encoding.UTF8.GetBytes("audio/mp4; codecs=\"mp4a.40.2\""), // -1
+            Encoding.UTF8.GetBytes("audio/webm; codecs=\"opus\""),
+            Encoding.UTF8.GetBytes("audio/mp4; codecs=\"mp4a.40.2\""),
 
-            // TODO: these are based on quality level for
             Encoding.UTF8.GetBytes(
-                "video/mp4; codecs=\"avc1.64001F, mp4a.40.2\""), // -2
+                "video/mp4; codecs=\"avc1.64001F, mp4a.40.2\""),
             Encoding.UTF8.GetBytes(
-                "video/webm; codecs=\"vp8.0, vorbis\""), // -3
+                "video/webm; codecs=\"vp8.0, vorbis\""),
             Encoding.UTF8.GetBytes(
-                "video/mp4; codecs=\"avc1.42001E, mp4a.40.2\""), // -4
-            //"some content type", // ?
+                "video/mp4; codecs=\"avc1.42001E, mp4a.40.2\""),
         };
 
         public static bool GetBestStream(ReadOnlySequence<byte> sequence,
             out TrackInfo track)
         {
             track = default;
-            if (!TryGetStreamInfo(ref sequence, out var adaptiveStreams,
-                out var streamMap, out var playerResponse))
+            if (!TryGetPlayerResponse(ref sequence, out var playerResponse))
                 return false;
 
-            if (adaptiveStreams.IsEmpty && streamMap.IsEmpty)
-                return false;
-
-            if (!TryParseAdaptiveStreams(adaptiveStreams,
-                out var bestAdaptiveStream))
-                return false;
-
-            if (!TryParseStreamMap(streamMap,
-                out var bestStreamMapStream))
-                return false;
-
-            var bestStream = bestStreamMapStream;
-            if (IsBetterStream(bestStream, bestAdaptiveStream))
-                bestStream = bestAdaptiveStream;
-
-            if (!TryGetTitle(playerResponse, out var title))
-                return false;
-            if (!TryGetString(bestStream.Url, out var location))
-                return false;
-            if (!TryGetString(bestStream.MimeType, out var mediaType))
-                return false;
-
-            track.TrackName = title!;
-            track.AudioLocation = new Uri(location!);
-            track.MediaTypeOverride = mediaType;
-            if (mediaType != null)
-                track.CodecOverride = GetCodec(mediaType);
-            return true;
-
-            static IAudioCodec? GetCodec(string mediaType)
+            using var decoded = new ReadOnlySequenceBuilder<byte>();
+            while (playerResponse.Length > 0)
             {
-                const string CodecsString = "codecs=\"";
-                var codecsIndex = mediaType.IndexOf(CodecsString);
+                // 3 bytes minimum as longest percent sequence is '%XX'
+                var buffer = decoded.GetMemory(3);
 
-                if (codecsIndex < 0)
-                    return default;
-
-                var start = codecsIndex + CodecsString.Length;
-                //return mediaType[start..^1];
-                return null;
-            }
-
-            static bool TryGetString(ReadOnlySpan<byte> input,
-                out string? value)
-            {
-                input = input.TrimEnd((byte)0);
-                value = default;
-                var buffer = ArrayPool<byte>.Shared.Rent(input.Length);
-
-                if (!TryUrlDecode(input, buffer, out var decodedLength))
-                    return false;
-
-                value = Encoding.UTF8.GetString(
-                    buffer.AsSpan().Slice(0, decodedLength));
-                ArrayPool<byte>.Shared.Return(buffer);
-                return true;
-            }
-
-            static bool TryGetTitle(ReadOnlySequence<byte> playerResponse,
-                out string? title)
-            {
-                var buffer = ArrayPool<byte>.Shared.Rent(
-                    (int)playerResponse.Length);
-                playerResponse.CopyTo(buffer);
-
-                var status = ParseInternal(buffer.AsSpan()
-                    .Slice(0, (int)playerResponse.Length),
-                    out title);
-
-                ArrayPool<byte>.Shared.Return(buffer);
-                return status;
-
-                static bool ParseInternal(Span<byte> buffer, out string? title)
+                if (playerResponse.Length >= buffer.Length)
                 {
-                    title = default;
-                    if (!TryUrlDecode(buffer, out var decodedLength))
-                        return false;
+                    playerResponse.Slice(0, buffer.Length)
+                        .CopyTo(buffer.Span);
 
-                    buffer = buffer.Slice(0, decodedLength);
-                    ReadOnlySpan<byte> playerResponse = buffer;
-
-                    var reader = new Utf8JsonReader(playerResponse);
-
-                    while (reader.Read())
-                    {
-                        if (reader.TokenType == JsonTokenType.PropertyName &&
-                            reader.ValueTextEquals(TitleProperty))
-                        {
-                            if (reader.TryReadToken(JsonTokenType.String))
-                            {
-                                title = reader.GetString();
-                                return true;
-                            }
-                        }
-                    }
-
-                    return false;
+                    playerResponse = playerResponse.Slice(buffer.Length);
                 }
+                else
+                {
+                    playerResponse.CopyTo(buffer.Span);
+                    playerResponse = ReadOnlySequence<byte>.Empty;
+                }
+
+                if (!TryUrlDecode(buffer.Span, out var decodedBytes))
+                    return false;
+
+                decoded.Advance(decodedBytes);
             }
+
+            var reader = new Utf8JsonReader(decoded.AsSequence());
+            if (!JsonDocument.TryParseValue(ref reader, out var document))
+                return false;
+
+            using var _ = document;
+
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+                return false;
+
+            if (!document.RootElement.TryGetProperty(StreamingDataProperty,
+                out var streamingData))
+                return false;
+
+            if (!document.RootElement.TryGetProperty(VideoDetailsProperty,
+                out var videoDetails))
+                return false;
+
+            StreamInfo bestFormatsStream = default;
+            if (streamingData.TryGetProperty(
+                FormatsProperty, out var formats)
+                && !TryGetBestStream(formats, out bestFormatsStream))
+                    return false;
+
+            StreamInfo bestAdaptiveFormatsStream = default;
+            if (streamingData.TryGetProperty(
+                AdaptiveFormatsProperty, out var adaptiveFormats) &&
+                !TryGetBestStream(adaptiveFormats,
+                    out bestAdaptiveFormatsStream))
+                return false;
+
+            var bestStream = bestAdaptiveFormatsStream;
+
+            if (IsBetterStream(bestStream, bestFormatsStream))
+                bestStream = bestFormatsStream;
+
+            if (!videoDetails.TryGetProperty(TitleProperty, out var title))
+                return false;
+
+            track.TrackName = title.GetString()!;
+            track.AudioLocation = new Uri(bestStream.Url.GetString()!);
+            track.MediaTypeOverride = bestStream.MimeType.GetString()!;
+
+            return true;
         }
 
-        private static bool TryGetStreamInfo(
+        private static bool TryGetBestStream(JsonElement streams,
+            out StreamInfo bestStream)
+        {
+            bestStream = default;
+
+            foreach (var stream in streams.EnumerateArray())
+            {
+                StreamInfo currentStream = default;
+
+                if (!stream.TryGetProperty(UrlProperty, out currentStream.Url))
+                    return false;
+                if (!stream.TryGetProperty(MimeTypeProperty,
+                    out currentStream.MimeType))
+                    return false;
+
+                var isKnownContentType = false;
+                for (int x = 0; x < KnownContentTypes.Length; x++)
+                    if (currentStream.MimeType.ValueEquals(
+                        KnownContentTypes[x]))
+                            isKnownContentType = true;
+
+                if (!isKnownContentType)
+                    continue;
+
+                if (!stream.TryGetProperty(BitrateProperty, out var bitrate))
+                {
+                    if (!bitrate.TryGetInt32(out currentStream.Bitrate))
+                        return false;
+                }
+                else if (stream.TryGetProperty(
+                    QualityProperty, out var quality))
+                {
+                    for (int x = 0; x < KnownQualityLevels.Length; x++)
+                    {
+                        if (quality.ValueEquals(KnownQualityLevels[x]))
+                        {
+                            currentStream.Bitrate = -x;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+
+                if (IsBetterStream(bestStream, currentStream))
+                    bestStream = currentStream;
+            }
+
+            return true;
+        }
+
+        private static bool TryGetPlayerResponse(
             ref ReadOnlySequence<byte> sequence,
-            out ReadOnlySequence<byte> adaptiveStreams,
-            out ReadOnlySequence<byte> streamMap,
             out ReadOnlySequence<byte> playerResponse)
         {
-            adaptiveStreams = default;
-            streamMap = default;
             playerResponse = default;
 
             while (TryGetKeyValuePair(ref sequence, out var key,
@@ -199,220 +218,29 @@ namespace Thermite.Sources.YouTube
                     return false;
                 else if (SequenceEqual(key, PlayerResponseProperty))
                     playerResponse = value;
-                else if (SequenceEqual(key, AdaptiveFmtsProperty))
-                    adaptiveStreams = value;
-                else if (SequenceEqual(key, UrlEncodedStreamFmtMapProperty))
-                    streamMap = value;
             }
 
             return true;
         }
 
-        private static bool TryParseAdaptiveStreams(
-            ReadOnlySequence<byte> adaptiveStreams,
-            out StreamInfo bestStream)
-        {
-            var buffer = ArrayPool<byte>.Shared.Rent(
-                (int)adaptiveStreams.Length);
-            adaptiveStreams.CopyTo(buffer);
-
-            var status = ParseInternal(buffer.AsSpan()
-                .Slice(0, (int)adaptiveStreams.Length),
-                out bestStream);
-
-            ArrayPool<byte>.Shared.Return(buffer);
-            return status;
-
-            static bool ParseInternal(Span<byte> buffer,
-                out StreamInfo bestStream)
-            {
-                bestStream = default;
-                if (!TryUrlDecode(buffer, out var decodedLength))
-                    return false;
-
-                buffer = buffer.Slice(0, decodedLength);
-                ReadOnlySpan<byte> adaptiveStreams = buffer;
-
-                while (TryReadTo(ref adaptiveStreams, (byte)',',
-                    out var stream))
-                {
-                    if (!TryParseAdaptiveStream(stream, ref bestStream))
-                        return false;
-                }
-
-                return true;
-            }
-
-            static bool TryParseAdaptiveStream(
-                ReadOnlySpan<byte> adaptiveStream,
-                ref StreamInfo bestStream)
-            {
-                StreamInfo stream = default;
-
-                while (TryGetKeyValuePair(ref adaptiveStream, out var key,
-                    out var value))
-                {
-                    if (key.SequenceEqual(BitrateProperty))
-                    {
-                        if (!Utf8Parser.TryParse(value, out int bitrate,
-                            out int _))
-                            return false;
-
-                        stream.Bitrate = bitrate;
-                    }
-                    else if (key.SequenceEqual(UrlProperty))
-                        stream.Url = value;
-                    else if (key.SequenceEqual(TypeProperty))
-                        stream.MimeType = value;
-                    else if (key.SequenceEqual(AudioSampleRateProperty))
-                    {
-                        if (!Utf8Parser.TryParse(value, out int sampleRate,
-                            out int _))
-                            return false;
-
-                        stream.SampleRate = sampleRate;
-                    }
-                }
-
-                if (!IsKnownContentType(stream.MimeType, out var position))
-                    position = int.MaxValue;
-
-                stream.MimeTypeRanking = -position;
-
-                if (IsBetterStream(bestStream, stream))
-                    bestStream = stream;
-
-                return true;
-            }
-        }
-
-        private static bool TryParseStreamMap(ReadOnlySequence<byte> streamMap,
-            out StreamInfo bestStream)
-        {
-            var buffer = ArrayPool<byte>.Shared.Rent(
-                (int)streamMap.Length);
-            streamMap.CopyTo(buffer);
-
-            var status = ParseInternal(buffer.AsSpan()
-                .Slice(0, (int)streamMap.Length),
-                out bestStream);
-
-            ArrayPool<byte>.Shared.Return(buffer);
-            return status;
-
-            static bool ParseInternal(Span<byte> buffer,
-                out StreamInfo bestStream)
-            {
-                bestStream = default;
-                if (!TryUrlDecode(buffer, out var decodedLength))
-                    return false;
-
-                buffer = buffer.Slice(0, decodedLength);
-                ReadOnlySpan<byte> streamMap = buffer;
-
-                while (TryReadTo(ref streamMap, (byte)',', out var stream))
-                {
-                    if (!TryParseStream(stream, ref bestStream))
-                        return false;
-                }
-
-                return true;
-            }
-
-            static bool TryParseStream(ReadOnlySpan<byte> streamMapStream,
-                ref StreamInfo bestStream)
-            {
-                StreamInfo stream = default;
-
-                while (TryGetKeyValuePair(ref streamMapStream, out var key,
-                    out var value))
-                {
-                    if (key.SequenceEqual(UrlProperty))
-                        stream.Url = value;
-                    else if (key.SequenceEqual(QualityProperty))
-                    {
-                        if (!IsKnownQuality(value, out var qualityPosition))
-                            return false;
-                        stream.Bitrate = -qualityPosition;
-                    }
-                    else if (key.SequenceEqual(TypeProperty))
-                        stream.MimeType = value;
-                }
-
-                if (!IsKnownContentType(stream.MimeType,
-                    out var contentPosition))
-                    contentPosition = int.MaxValue;
-
-                stream.MimeTypeRanking = -contentPosition;
-
-                if (IsBetterStream(bestStream, stream))
-                    bestStream = stream;
-
-                return true;
-            }
-
-            static bool IsKnownQuality(ReadOnlySpan<byte> quality,
-                out int position)
-            {
-                for (int i = 0; i < KnownQualityLevels.Length; i++)
-                {
-                    if (quality.SequenceEqual(KnownQualityLevels[i]))
-                    {
-                        position = i;
-                        return true;
-                    }
-                }
-
-                position = default;
-                return false;
-            }
-        }
-
-        private static bool IsKnownContentType(ReadOnlySpan<byte> contentType,
-            out int position)
-        {
-            position = default;
-            Span<byte> decodedContentType =
-                stackalloc byte[contentType.Length];
-
-            if (!TryUrlDecode(contentType, decodedContentType,
-                out int decodedLength))
-                return false;
-
-            decodedContentType = decodedContentType.Slice(0, decodedLength);
-
-            for (int i = 0; i < KnownContentTypes.Length; i++)
-            {
-                if (contentType.SequenceEqual(KnownContentTypes[i]))
-                {
-                    position = i;
-                    return true;
-                }
-            }
-
-            position = default;
-            return false;
-        }
-
         private static bool IsBetterStream(StreamInfo currentBest,
             StreamInfo stream)
         {
-            if (stream.MimeTypeRanking > currentBest.MimeTypeRanking)
-                return true;
+            int currentBestMimeType = 0;
+            int checkBestMimeType = 0;
 
-            if (stream.Bitrate > currentBest.Bitrate)
-                return true;
+            for (int x = 0; x < KnownContentTypes.Length; x++)
+            {
+                if (currentBest.MimeType.ValueKind == JsonValueKind.Undefined)
+                    return true;
+                else if (currentBest.MimeType.ValueEquals(KnownContentTypes[x]))
+                    currentBestMimeType = x;
+                else if (stream.MimeType.ValueEquals(KnownContentTypes[x]))
+                    checkBestMimeType = x;
+            }
 
-            var streamDistance = 48000 - stream.SampleRate;
-            var currentBestDistance = 48000 - currentBest.SampleRate;
-
-            if (streamDistance < 0)
-                streamDistance = -streamDistance;
-
-            if (currentBestDistance < 0)
-                currentBestDistance = -currentBestDistance;
-
-            return streamDistance < currentBestDistance;
+            return checkBestMimeType <= currentBestMimeType
+                && stream.Bitrate >= currentBest.Bitrate;
         }
     }
 }
