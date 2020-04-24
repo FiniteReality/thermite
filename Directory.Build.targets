@@ -24,7 +24,7 @@
     <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0-preview.2.20160.3" />
     <PackageReference Update="Microsoft.Extensions.Http" Version="5.0.0-preview.2.20160.3" />
     <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0-preview.2.20160.3" />
-    <PackageReference Update="Microsoft.Net.Compilers.Toolset" Version="3.6.0-2.final" />
+    <PackageReference Update="Microsoft.Net.Compilers.Toolset" Version="3.6.0-3.final" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.0.0" />
     <PackageReference Update="System.Composition.AttributedModel" Version="5.0.0-preview.2.20160.6" />
