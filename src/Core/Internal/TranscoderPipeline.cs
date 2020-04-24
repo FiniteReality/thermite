@@ -46,7 +46,9 @@ namespace Thermite.Internal
             var transcoders = new List<IAudioTranscoder>();
             var currentCodec = inputCodec;
 
-            while (!IsDesiredCodec(currentCodec))
+            // TODO: We could potentially bail out here if we're already the
+            // desired codec.
+            do
             {
                 if (!manager.TryGetTranscoderFactory(currentCodec,
                     out var factory))
@@ -59,6 +61,7 @@ namespace Thermite.Internal
                     cancellationToken);
                 input = transcoder.Output;
             }
+            while (!IsDesiredCodec(currentCodec));
 
             return new TranscoderPipeline(input, transcoders);
 

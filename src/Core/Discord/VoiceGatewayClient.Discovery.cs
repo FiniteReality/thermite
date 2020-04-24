@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Thermite.Discord.Models;
 using Thermite.Utilities;
 
@@ -37,6 +38,9 @@ namespace Thermite.Discord
                 _discoveryPacketResponse, out var endpoint))
                 return false;
 
+            _logger.LogTrace(
+                "Discovery endpoint returned {ClientAddress}", endpoint);
+
             ClientEndPointUpdated?.Invoke(this, endpoint);
             ClientEndPoint = endpoint;
 
@@ -52,7 +56,7 @@ namespace Thermite.Discord
                     .TrimEnd((byte)0);
                 var portBuffer = buffer.Slice(buffer.Length - 2);
 
-                if (!IPUtilities.TryParseAddress(
+                if (!Utf8IpAddressUtilities.TryParseAddress(
                     addressBuffer, out var address))
                     return false;
 

@@ -164,7 +164,8 @@ namespace Thermite.Utilities
                         break;
                     case (byte)'%':
                         if (!TryPercentDecodeUtf8(buffer,
-                            ref readHead, ref writeHead))
+                            ref readHead, ref writeHead)
+                            && writeHead < buffer.Length)
                             buffer[writeHead++] = (byte)'%';
                         readHead -= 1;
                         break;

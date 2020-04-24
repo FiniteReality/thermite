@@ -1,12 +1,14 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-
+using Microsoft.Extensions.Logging;
 using static TerraFX.Utilities.State;
 using static Thermite.Utilities.ThrowHelpers;
 
@@ -69,16 +71,17 @@ namespace Thermite.Discord
         {
             await _heartbeatMutex.WaitAsync(cancellationToken);
 
-            bool completed = false;
-            while (!completed)
+            bool success;
+            do
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 await Task.Delay(_heartbeatInterval, cancellationToken);
 
-                completed = await SendHeartbeatAsync(
+                success = await SendHeartbeatAsync(
                     _nonce++, cancellationToken);
             }
+            while (success);
         }
 
         private async Task RunProcessAsync(PipeReader reader,
@@ -153,10 +156,20 @@ namespace Thermite.Discord
             {
                 if (reader.TryRead(out var buffer))
                 {
+                    LogSend(buffer);
+
                     await _websocket.SendAsync(buffer.WrittenMemory,
                         WebSocketMessageType.Text, true, cancellationToken);
                 }
             }
+        }
+
+        [Conditional("DEBUG")]
+        private void LogSend(ArrayBufferWriter<byte> buffer)
+        {
+            var text = Encoding.UTF8.GetString(buffer.WrittenSpan);
+
+            _logger.LogTrace("Writing {Payload}", text);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Thermite.Discord.Models;
 
 using static Thermite.Utilities.ThrowHelpers;
@@ -18,6 +19,8 @@ namespace Thermite.Discord
             CancellationToken cancellationToken = default)
         {
             bool lockTaken = false;
+
+            _logger.LogTrace("Queueing Heartbeat");
 
             try
             {
@@ -42,6 +45,8 @@ namespace Thermite.Discord
             CancellationToken cancellationToken = default)
         {
             bool lockTaken = false;
+
+            _logger.LogTrace("Queueing Identify");
 
             try
             {
@@ -68,6 +73,8 @@ namespace Thermite.Discord
             CancellationToken cancellationToken = default)
         {
             bool lockTaken = false;
+
+            _logger.LogTrace("Queueing Speaking");
 
             try
             {
@@ -101,6 +108,8 @@ namespace Thermite.Discord
             Debug.Assert(ClientEndPoint != null);
 
             bool lockTaken = false;
+
+            _logger.LogTrace("Queueing SelectProtocol");
 
             try
             {

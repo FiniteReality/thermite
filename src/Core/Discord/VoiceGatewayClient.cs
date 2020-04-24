@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using TerraFX.Utilities;
 using Thermite.Discord.Models;
 using Thermite.Internal;
@@ -29,6 +30,7 @@ namespace Thermite.Discord
 
         private readonly Socket _discoverySocket;
         private readonly SemaphoreSlim _heartbeatMutex;
+        private readonly ILogger _logger;
         private readonly Pipe _receivePipe;
         private readonly Channel<ArrayBufferWriter<byte>> _sendChannel;
         private readonly IMemoryOwner<byte> _sessionEncryptionKey;
@@ -57,12 +59,13 @@ namespace Thermite.Discord
                 SessionEncryptionKeyLength);
 
         public VoiceGatewayClient(UserToken userInfo, Socket discoverySocket,
-            IPEndPoint? clientEndPoint, MemoryPool<byte>? memoryPool = default)
+            IPEndPoint? clientEndPoint,
+            ILogger clientLogger)
         {
-            memoryPool ??= MemoryPool<byte>.Shared;
-
             _discoverySocket = discoverySocket;
             _heartbeatMutex = new SemaphoreSlim(initialCount: 0);
+
+            _logger = clientLogger;
 
             _receivePipe = new Pipe();
             _receivePipe.Reader.Complete();
@@ -77,7 +80,8 @@ namespace Thermite.Discord
                     FullMode = BoundedChannelFullMode.DropOldest
                 });
 
-            _sessionEncryptionKey = memoryPool.Rent(SessionEncryptionKeyLength);
+            _sessionEncryptionKey
+                = MemoryPool<byte>.Shared.Rent(SessionEncryptionKeyLength);
             _userInfo = userInfo;
             _websocket = new ClientWebSocket();
 
@@ -117,6 +121,9 @@ namespace Thermite.Discord
             if (_state != Running)
                 ThrowInvalidOperationException(
                     "Must be connected to set speaking");
+
+            _logger.LogDebug("Set Speaking = {Speaking}, Delay = {Delay}",
+                speaking, delay);
 
             await SendSpeakingAsync(speaking, delay, Ssrc);
         }
@@ -180,6 +187,8 @@ namespace Thermite.Discord
 
             sequence = sequence.Slice(reader.Position);
 
+            _logger.LogTrace("Received opcode {Opcode}", payload.Opcode);
+
             return TryProcessOpcodeAsync(ref payload, cancellationToken);
         }
 
@@ -198,7 +207,7 @@ namespace Thermite.Discord
                 }
                 case VoiceGatewayOpcode.Ready:
                 {
-                    if (!IPUtilities.TryParseAddress(
+                    if (!Utf8IpAddressUtilities.TryParseAddress(
                         payload.Ready.SlicedIp, out var address))
                         return new ValueTask<bool>(false);
 

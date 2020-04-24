@@ -61,7 +61,7 @@ namespace Thermite.Internal
             _connectMutex = new SemaphoreSlim(initialCount: 0);
             _endpoint = endpoint;
             _gatewayClient = new VoiceGatewayClient(userInfo, socket,
-                clientEndPoint);
+                clientEndPoint, logger);
             _dataClient = new VoiceDataClient(_gatewayClient, socket);
             _logger = logger;
             _manager = manager;
@@ -261,7 +261,9 @@ namespace Thermite.Internal
             var codec = info.CodecOverride ??
                 await decoder.IdentifyCodecAsync(linkedCancelToken.Token);
 
-            if (codec == null)
+            if (codec != null)
+                _logger.LogTrace("Identified codec as {Name}", codec.Name);
+            else
             {
                 _logger.LogWarning(
                     "Could not identify codec for track {url}. Skipping.",
